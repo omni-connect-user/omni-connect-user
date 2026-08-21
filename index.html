@@ -1,93 +1,59 @@
 <!DOCTYPE html>
-<html lang="th">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniConnect</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>Jump Master!</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-        body { background-color: #f0f2f5; }
-        .login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 9999; display: flex; justify-content: center; align-items: center; padding: 20px; }
-        .login-box { width: 100%; max-width: 400px; text-align: center; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .main-content { padding: 20px; max-width: 600px; margin: 0 auto; }
-        input, textarea { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; }
-        button { width: 100%; padding: 10px; background: #1877f2; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 5px; }
-        .post-card { background: white; padding: 15px; border-radius: 8px; margin-top: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        body { text-align: center; font-family: Arial; }
+        canvas { background: #f0f0f0; border: 2px solid #333; display: block; margin: 20px auto; }
     </style>
 </head>
 <body>
-
-    <div id="loginScreen" class="login-screen">
-        <div class="login-box">
-            <h2 style="color: #1877f2; margin-bottom: 15px;">OmniConnect</h2>
-            <input type="email" id="emailInput" placeholder="อีเมลของคุณ">
-            <input type="password" id="passwordInput" placeholder="รหัสผ่าน">
-            <button id="authBtn" onclick="handleAuth()">เข้าสู่ระบบ</button>
-            <p style="margin-top: 15px; font-size: 13px; cursor: pointer; color: #1877f2;" onclick="toggleMode()" id="toggleText">ยังไม่มีบัญชี? สมัครสมาชิกที่นี่</p>
-        </div>
-    </div>
-
-    <div class="main-content">
-        <h2 style="color: #1877f2; margin-bottom: 15px;">OmniConnect Feed</h2>
-        <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <textarea id="postInput" placeholder="คุณกำลังคิดอะไรอยู่?"></textarea>
-            <button onclick="sendPost()">โพสต์</button>
-        </div>
-        <div id="feed"></div>
-    </div>
+    <h1>Jump Master!</h1>
+    <p>กดคลิกหน้าจอเพื่อกระโดด!</p>
+    <canvas id="gameCanvas" width="400" height="200"></canvas>
+    <div id="score">คะแนน: 0</div>
 
     <script>
-        const SUPABASE_URL = "https://razrwpmqnqohpetlkpiw.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhenJ3cG1xbnFvaHBldGxrcGl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyOTk2MjUsImV4cCI6MjEwMjg3NTYyNX0.3n8lnroMGKssSHUqRneh7M9uyd1dSxymraZHzwXhhuk";
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        let player = { x: 50, y: 150, w: 30, h: 30, dy: 0, jump: false };
+        let obstacle = { x: 400, y: 160, w: 20, h: 40 };
+        let score = 0;
 
-        let isLoginMode = true;
-
-        function toggleMode() {
-            isLoginMode = !isLoginMode;
-            document.getElementById('authBtn').innerText = isLoginMode ? "เข้าสู่ระบบ" : "สมัครสมาชิก";
-            document.getElementById('toggleText').innerText = isLoginMode ? "ยังไม่มีบัญชี? สมัครสมาชิกที่นี่" : "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ";
-        }
-
-        async function checkUserSession() {
-            const { data: { session } } = await _supabase.auth.getSession();
-            if (session) {
-                document.getElementById('loginScreen').style.display = 'none';
-                loadPosts();
+        function update() {
+            // ระบบกระโดด
+            if (player.jump) {
+                player.dy = -8;
+                player.jump = false;
             }
-        }
+            player.dy += 0.5; // แรงโน้มถ่วง
+            player.y += player.dy;
+            if (player.y > 150) { player.y = 150; player.dy = 0; }
 
-        async function handleAuth() {
-            const email = document.getElementById('emailInput').value;
-            const password = document.getElementById('passwordInput').value;
-            if (!email || !password) return alert("กรุณากรอกอีเมลและรหัสผ่าน");
+            // อุปสรรควิ่งมา
+            obstacle.x -= 5;
+            if (obstacle.x < -20) { obstacle.x = 400; score++; }
 
-            if (isLoginMode) {
-                const { error } = await _supabase.auth.signInWithPassword({ email, password });
-                if (error) alert(error.message.includes("Invalid") ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง" : error.message);
-                else location.reload();
-            } else {
-                const { error } = await _supabase.auth.signUp({ email, password });
-                if (error) alert(error.message);
-                else { alert("สมัครสมาชิกสำเร็จ! กรุณากดสลับไปที่โหมดเข้าสู่ระบบ"); toggleMode(); }
+            // เช็กชน
+            if (player.x < obstacle.x + obstacle.w && player.x + player.w > obstacle.x && player.y + player.h > obstacle.y) {
+                alert("Game Over! คะแนนของคุณ: " + score);
+                score = 0; obstacle.x = 400;
             }
+            draw();
+            requestAnimationFrame(update);
         }
 
-        async function loadPosts() {
-            const { data: posts } = await _supabase.from('posts').select('*').order('id', { ascending: false });
-            document.getElementById('feed').innerHTML = (posts || []).map(p => `<div class="post-card">${p.content}</div>`).join('');
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "blue";
+            ctx.fillRect(player.x, player.y, player.w, player.h); // ตัวละคร
+            ctx.fillStyle = "red";
+            ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h); // อุปสรรค
+            document.getElementById("score").innerText = "คะแนน: " + score;
         }
 
-        async function sendPost() {
-            const content = document.getElementById('postInput').value;
-            if (!content) return;
-            await _supabase.from('posts').insert([{ content: content }]);
-            document.getElementById('postInput').value = '';
-            loadPosts();
-        }
-
-        checkUserSession();
+        canvas.addEventListener("click", () => { if (player.y === 150) player.jump = true; });
+        update();
     </script>
 </body>
 </html>
