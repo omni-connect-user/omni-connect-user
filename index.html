@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Roblox 3D Obby Pro</title>
+    <title>Roblox 3D Obby Fixed</title>
     <style>
         * { touch-action: none; user-select: none; }
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; }
@@ -15,22 +15,22 @@
         }
         @media screen and (orientation: portrait) { #orientNotice { display: flex; } }
 
-        /* UI Layer */
         .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         
-        /* Joystick Base */
-        #joystick-zone { position: absolute; bottom: 30px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; pointer-events: auto; }
-        #joystick-stick { position: absolute; top: 35px; left: 35px; width: 50px; height: 50px; background: rgba(255,255,255,0.8); border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        #joystick-zone { position: absolute; bottom: 30px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.25); border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; pointer-events: auto; }
+        #joystick-stick { position: absolute; top: 35px; left: 35px; width: 50px; height: 50px; background: rgba(255,255,255,0.9); border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
         
-        /* Jump Button */
-        #jump-btn { position: absolute; bottom: 40px; right: 50px; width: 80px; height: 80px; background: rgba(255, 71, 87, 0.85); border: 3px solid #fff; border-radius: 50%; color: white; font-weight: bold; font-size: 18px; pointer-events: auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
-        #jump-btn:active { background: rgba(255, 71, 87, 1); transform: scale(0.95); }
+        #jump-btn { position: absolute; bottom: 40px; right: 50px; width: 80px; height: 80px; background: rgba(255, 71, 87, 0.9); border: 3px solid #fff; border-radius: 50%; color: white; font-weight: bold; font-size: 18px; pointer-events: auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+        #jump-btn:active { transform: scale(0.92); }
+
+        #msg-box { position: absolute; top: 20px; width: 100%; text-align: center; color: #fff; font-size: 22px; font-weight: bold; text-shadow: 2px 2px 4px #000; display: none; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
     <div id="orientNotice">📱 กรุณาเอียงมือถือเป็น "แนวนอน" เพื่อเล่นครับ!</div>
+    <div id="msg-box">CHECKPOINT!</div>
 
     <div class="ui-layer">
         <div id="joystick-zone"><div id="joystick-stick"></div></div>
@@ -38,7 +38,7 @@
     </div>
 
     <script>
-        // 1. Scene & Camera Setup
+        // 1. Setup Scene
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x74b9ff);
 
@@ -47,62 +47,95 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Lighting
         const light = new THREE.DirectionalLight(0xffffff, 1.2);
         light.position.set(20, 40, 20);
         scene.add(light);
-        scene.add(new THREE.AmbientLight(0x888888));
+        scene.add(new THREE.AmbientLight(0x707070));
 
-        // 2. Build Obby Course
-        function createBox(x, y, z, w, h, d, color) {
+        // 2. Platforms Data (Obby Course)
+        const platforms = [];
+        function createPlatform(x, y, z, w, h, d, color, isCP = false) {
             const geo = new THREE.BoxGeometry(w, h, d);
             const mat = new THREE.MeshPhongMaterial({ color });
             const mesh = new THREE.Mesh(geo, mat);
             mesh.position.set(x, y, z);
+            mesh.userData = { w, h, d, isCP };
             scene.add(mesh);
+            platforms.push(mesh);
             return mesh;
         }
 
-        // Platforms
-        createBox(0, -0.5, 0, 8, 1, 8, 0x2ed573);    // Start
-        createBox(0, -0.5, -10, 3, 1, 3, 0xffa500);  // Step 1
-        createBox(0, 0.5, -18, 3, 1, 3, 0xffa500);   // Step 2
-        createBox(0, 1.5, -26, 3, 1, 3, 0xffa500);   // Step 3
-        createBox(0, 2.5, -36, 10, 1, 10, 0x9b59b6); // Checkpoint
-        createBox(0, 2.5, -48, 2, 1, 8, 0x34495e);  // Lava Bridge (Narrow)
-        createBox(0, 3.5, -60, 8, 1, 8, 0xf1c40f);  // Goal
+        // สร้างด่าน Obby
+        createPlatform(0, -0.5, 0, 8, 1, 8, 0x2ed573);       // Start
+        createPlatform(0, -0.5, -10, 4, 1, 4, 0xffa500);     // Platform 1
+        createPlatform(0, 0.5, -18, 4, 1, 4, 0xffa500);      // Platform 2
+        createPlatform(0, 1.5, -26, 4, 1, 4, 0xffa500);      // Platform 3
+        createPlatform(0, 2.5, -36, 8, 1, 8, 0x9b59b6, true); // Checkpoint (ม่วง)
+        createPlatform(0, 3.5, -48, 3, 1, 3, 0xe74c3c);     // Platform 4
+        createPlatform(0, 4.5, -58, 10, 1, 10, 0xf1c40f);   // Goal
 
-        // 3. Create Roblox Character (Blocky Humanoid)
+        // 3. Roblox Character with Details & Clothes
         const playerGroup = new THREE.Group();
-        
-        // Head
-        const head = createBox(0, 1.5, 0, 0.6, 0.6, 0.6, 0xffcc99);
-        // Body
-        const torso = createBox(0, 0.8, 0, 0.7, 0.8, 0.4, 0x0984e3);
-        // Arms
-        const leftArm = createBox(-0.55, 0.8, 0, 0.3, 0.8, 0.3, 0xd63031);
-        const rightArm = createBox(0.55, 0.8, 0, 0.3, 0.8, 0.3, 0xd63031);
-        // Legs
-        const leftLeg = createBox(-0.2, 0.1, 0, 0.3, 0.7, 0.3, 0x2d3436);
-        const rightLeg = createBox(0.2, 0.1, 0, 0.3, 0.7, 0.3, 0x2d3436);
 
-        playerGroup.add(head, torso, leftArm, rightArm, leftLeg, rightLeg);
-        playerGroup.position.set(0, 0.5, 0);
+        function createBox(w, h, d, color, x, y, z) {
+            const geo = new THREE.BoxGeometry(w, h, d);
+            const mat = new THREE.MeshPhongMaterial({ color });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            return mesh;
+        }
+
+        // Head + Face + Hair
+        const head = createBox(0.6, 0.6, 0.6, 0xffcc99, 0, 1.5, 0);
+        const hair = createBox(0.64, 0.2, 0.64, 0x331a00, 0, 1.82, 0); // ผม
+        const eyeL = createBox(0.08, 0.12, 0.05, 0x000000, -0.15, 1.55, -0.31); // ตาซ้าย
+        const eyeR = createBox(0.08, 0.12, 0.05, 0x000000, 0.15, 1.55, -0.31);  // ตาขวา
+        
+        // Shirt Body
+        const torso = createBox(0.7, 0.8, 0.4, 0x0984e3, 0, 0.8, 0); // เสื้อสีน้ำเงิน
+        
+        // Arms
+        const leftArmGroup = new THREE.Group();
+        leftArmGroup.position.set(-0.52, 1.1, 0);
+        const leftArm = createBox(0.28, 0.8, 0.28, 0xffcc99, 0, -0.4, 0);
+        leftArmGroup.add(leftArm);
+
+        const rightArmGroup = new THREE.Group();
+        rightArmGroup.position.set(0.52, 1.1, 0);
+        const rightArm = createBox(0.28, 0.8, 0.28, 0xffcc99, 0, -0.4, 0);
+        rightArmGroup.add(rightArm);
+
+        // Legs (Pants)
+        const leftLegGroup = new THREE.Group();
+        leftLegGroup.position.set(-0.2, 0.4, 0);
+        const leftLeg = createBox(0.28, 0.8, 0.28, 0x2d3436, 0, -0.4, 0); // กางเกงดำ
+        leftLegGroup.add(leftLeg);
+
+        const rightLegGroup = new THREE.Group();
+        rightLegGroup.position.set(0.2, 0.4, 0);
+        const rightLeg = createBox(0.28, 0.8, 0.28, 0x2d3436, 0, -0.4, 0);
+        rightLegGroup.add(rightLeg);
+
+        playerGroup.add(head, hair, eyeL, eyeR, torso, leftArmGroup, rightArmGroup, leftLegGroup, rightLegGroup);
         scene.add(playerGroup);
 
-        // Controls Logic
+        // 4. Game Logic & Controls
         let joyX = 0, joyY = 0;
         let camYaw = 0, camPitch = 0.3;
-        let velocityY = 0, isGrounded = true;
+        let velocityY = 0;
+        let isGrounded = false;
+        let animTime = 0;
 
-        // Joystick Control
+        let spawnPoint = new THREE.Vector3(0, 2, 0);
+        playerGroup.position.copy(spawnPoint);
+
+        // Joystick Input
         const zone = document.getElementById('joystick-zone');
         const stick = document.getElementById('joystick-stick');
         let joyTouchId = null;
 
         zone.addEventListener('touchstart', (e) => {
-            const touch = e.changedTouches[0];
-            joyTouchId = touch.identifier;
+            joyTouchId = e.changedTouches[0].identifier;
         });
 
         window.addEventListener('touchmove', (e) => {
@@ -136,7 +169,7 @@
             }
         });
 
-        // Touch Look (Swipe Right Screen to Rotate Camera)
+        // Touch Look Angle
         let lookTouchId = null, lastTouchX = 0, lastTouchY = 0;
         window.addEventListener('touchstart', (e) => {
             for (let touch of e.changedTouches) {
@@ -172,44 +205,85 @@
         // Jump
         document.getElementById('jump-btn').addEventListener('touchstart', (e) => {
             e.preventDefault();
-            if (isGrounded) { velocityY = 0.22; isGrounded = false; }
+            if (isGrounded) {
+                velocityY = 0.22;
+                isGrounded = false;
+            }
         });
 
-        // Main Loop
+        // Main Game Loop
         function animate() {
             requestAnimationFrame(animate);
 
-            // Movement logic relative to Camera Angle
-            if (Math.abs(joyX) > 0.1 || Math.abs(joyY) > 0.1) {
-                const moveAngle = Math.atan2(joyX, joyY);
-                const moveSpeed = 0.12;
+            // 1. Correct Movement & Direction
+            const isMoving = Math.abs(joyX) > 0.1 || Math.abs(joyY) > 0.1;
+            if (isMoving) {
+                const moveAngle = Math.atan2(joyX, -joyY); // ดันขึ้น = เดินหน้าตรงๆ
+                const speed = 0.12;
 
-                playerGroup.position.x -= Math.sin(camYaw + moveAngle) * moveSpeed;
-                playerGroup.position.z -= Math.cos(camYaw + moveAngle) * moveSpeed;
+                playerGroup.position.x += Math.sin(camYaw + moveAngle) * speed;
+                playerGroup.position.z += Math.cos(camYaw + moveAngle) * speed;
 
-                playerGroup.rotation.y = camYaw + moveAngle + Math.PI;
-            }
+                playerGroup.rotation.y = camYaw + moveAngle;
 
-            // Gravity & Jump Physics
-            playerGroup.position.y += velocityY;
-            if (playerGroup.position.y > 0.5) {
-                velocityY -= 0.01;
-                isGrounded = false;
+                // Arm/Leg Walking Animation
+                animTime += 0.15;
+                leftArmGroup.rotation.x = Math.sin(animTime) * 0.6;
+                rightArmGroup.rotation.x = -Math.sin(animTime) * 0.6;
+                leftLegGroup.rotation.x = -Math.sin(animTime) * 0.6;
+                rightLegGroup.rotation.x = Math.sin(animTime) * 0.6;
             } else {
-                playerGroup.position.y = 0.5;
+                // Reset Pose when Idle
+                leftArmGroup.rotation.x = 0;
+                rightArmGroup.rotation.x = 0;
+                leftLegGroup.rotation.x = 0;
+                rightLegGroup.rotation.x = 0;
+            }
+
+            // 2. Gravity Physics
+            velocityY -= 0.01;
+            playerGroup.position.y += velocityY;
+
+            // 3. Collision Detection with Platforms
+            isGrounded = false;
+            const pPos = playerGroup.position;
+
+            for (let plat of platforms) {
+                const b = plat.position;
+                const dim = plat.userData;
+
+                // Check X, Z bounds
+                if (pPos.x >= b.x - dim.w/2 - 0.3 && pPos.x <= b.x + dim.w/2 + 0.3 &&
+                    pPos.z >= b.z - dim.d/2 - 0.3 && pPos.z <= b.z + dim.d/2 + 0.3) {
+                    
+                    const topY = b.y + dim.h/2;
+                    if (pPos.y <= topY + 0.1 && pPos.y >= topY - 0.5 && velocityY <= 0) {
+                        pPos.y = topY;
+                        velocityY = 0;
+                        isGrounded = true;
+
+                        // Trigger Checkpoint
+                        if (dim.isCP) {
+                            spawnPoint.set(b.x, topY + 1.5, b.z);
+                            const msg = document.getElementById('msg-box');
+                            msg.style.display = 'block';
+                            setTimeout(() => { msg.style.display = 'none'; }, 2000);
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // 4. Fall & Respawn
+            if (pPos.y < -12) {
+                playerGroup.position.copy(spawnPoint);
                 velocityY = 0;
-                isGrounded = true;
             }
 
-            // Respawn if Fallen
-            if (playerGroup.position.y < -10) {
-                playerGroup.position.set(0, 0.5, 0);
-            }
-
-            // Camera Tracking
+            // 5. Camera Follow
             const camDist = 6;
-            camera.position.x = playerGroup.position.x + Math.sin(camYaw) * Math.cos(camPitch) * camDist;
-            camera.position.z = playerGroup.position.z + Math.cos(camYaw) * Math.cos(camPitch) * camDist;
+            camera.position.x = playerGroup.position.x - Math.sin(camYaw) * Math.cos(camPitch) * camDist;
+            camera.position.z = playerGroup.position.z - Math.cos(camYaw) * Math.cos(camPitch) * camDist;
             camera.position.y = playerGroup.position.y + Math.sin(camPitch) * camDist + 1;
             camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1, playerGroup.position.z);
 
