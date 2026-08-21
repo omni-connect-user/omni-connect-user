@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="auto">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniConnect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50 px-4 py-2 flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-blue-600">OmniConnect</h1>
+        <div class="flex space-x-2">
+            <button class="bg-gray-200 p-2 rounded-full">🔍</button>
+            <button class="bg-gray-200 p-2 rounded-full">💬</button>
+        </div>
+    </header>
+
+    <!-- Main Feed -->
+    <main class="max-w-lg mx-auto mt-4 px-2">
+        <!-- Post Box -->
+        <div class="bg-white p-4 rounded-lg shadow mb-4">
+            <div class="flex items-center space-x-2">
+                <div class="w-10 h-10 bg-gray-300 rounded-full"></div>
+                <input type="text" id="postInput" class="bg-gray-100 w-full rounded-full py-2 px-4 outline-none" placeholder="...">
+            </div>
+        </div>
+
+        <!-- Newsfeed Post -->
+        <div class="bg-white rounded-lg shadow mb-4 p-4">
+            <div class="flex items-center space-x-2 mb-2">
+                <div class="w-10 h-10 bg-blue-500 rounded-full"></div>
+                <div>
+                    <h2 class="font-semibold text-sm">OmniConnect Official</h2>
+                    <p class="text-xs text-gray-500">Just now</p>
+                </div>
+            </div>
+            <p id="welcomeText" class="text-gray-800 my-2"></p>
+            <div class="flex justify-around border-t pt-2 text-gray-500 text-sm">
+                <button>👍 Like</button>
+                <button>💬 Comment</button>
+                <button>↗️ Share</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Automatic Language Script -->
+    <script>
+        const userLang = navigator.language || navigator.userLanguage; 
+        
+        const translations = {
+            "th": { placeholder: "คุณกำลังคิดอะไรอยู่?", welcome: "ยินดีต้อนรับสู่ OmniConnect!" },
+            "en": { placeholder: "What's on your mind?", welcome: "Welcome to OmniConnect!" },
+            "es": { placeholder: "¿En qué estás pensando?", welcome: "¡Bienvenido a OmniConnect!" },
+            "zh": { placeholder: "你在想什么？", welcome: "欢迎来到 OmniConnect！" }
+        };
+
+        const langKey = userLang.startsWith("th") ? "th" : 
+                        userLang.startsWith("es") ? "es" : 
+                        userLang.startsWith("zh") ? "zh" : "en";
+
+        document.getElementById("postInput").placeholder = translations[langKey].placeholder;
+        document.getElementById("welcomeText").innerText = translations[langKey].welcome;
+    </script>
+</body>
+</html>
