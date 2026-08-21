@@ -4,35 +4,68 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jump Master!</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { text-align: center; font-family: Arial, sans-serif; background-color: #f0f2f5; margin-top: 50px; }
-        h1 { color: #333; }
-        canvas { background: linear-gradient(to bottom, #87CEEB, #e0f6ff); border: 3px solid #333; display: block; margin: 20px auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #score { font-size: 20px; font-weight: bold; color: #1877f2; }
+        body { text-align: center; font-family: Arial, sans-serif; background-color: #f0f2f5; margin-top: 30px; }
+        h1 { color: #333; margin-bottom: 5px; }
+        canvas { background: linear-gradient(to bottom, #87CEEB, #e0f6ff); border: 3px solid #333; display: block; margin: 10px auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #scoreBoard { font-size: 18px; font-weight: bold; color: #1877f2; margin-bottom: 10px; }
+        
+        /* หน้าต่าง Game Over แบบป๊อป업สุดเท่ */
+        #gameOverModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 999; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .modal-content h2 { color: #ff4d4d; margin-bottom: 10px; }
+        .modal-content input { width: 80%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; text-align: center; font-size: 16px; }
+        .modal-content button { background: #1877f2; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; width: 100%; }
+        .modal-content button:hover { background: #145dbf; }
+        #leaderboardList { margin-top: 15px; text-align: left; font-size: 14px; max-height: 120px; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 6px; }
     </style>
 </head>
 <body>
 
     <h1>Jump Master!</h1>
-    <p>แตะที่หน้าจอหรือกด Spacebar เพื่อกระโดด!</p>
+    <p>แตะที่หน้าจอหรือกด Spacebar เพื่อกระโดด</p>
     
+    <div id="scoreBoard">คะแนน: <span id="currentScore">0</span> | สูงสุด: <span id="highScore">0</span></div>
     <canvas id="gameCanvas" width="400" height="200"></canvas>
-    <div id="score">คะแนน: 0</div>
+
+    <!-- ป๊อปอัพเมื่อแพ้ -->
+    <div id="gameOverModal">
+        <div class="modal-content">
+            <h2>Game Over!</h2>
+            <p>ทำคะแนนได้: <span id="finalScore">0</span> แต้ม</p>
+            <input type="text" id="playerName" placeholder="ใส่ชื่อของคุณ" maxlength="10">
+            <button onclick="saveScoreAndRestart()">บันทึกสถิติ & เล่นต่อ</button>
+            
+            <h4 style="margin-top: 15px; color: #333;">🏆 อันดับคะแนนสูงสุด</h4>
+            <div id="leaderboardList">กำลังโหลด...</div>
+        </div>
+    </div>
 
     <script>
+        // เชื่อมต่อ Supabase
+        const SUPABASE_URL = "https://razrwpmqnqohpetlkpiw.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhenJ3cG1xbnFvaHBldlkrcGl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyOTk2MjUsImV4cCI6MjEwMjg3NTYyNX0.3n8lnroMGKssSHUqRneh7M9uyd1dSxymraZHzwXhhuk";
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         
         let player = { x: 50, y: 135, w: 40, h: 45, dy: 0, grounded: true };
         let obstacle = { x: 400, y: 145, w: 20, h: 35 };
         let score = 0;
+        let highScore = localStorage.getItem("highScore") || 0;
         let gameSpeed = 6;
+        let isGameOver = false;
 
-        // โหลดรูปภาพตัวละคร (เปลี่ยนลิงก์ข้างในเครื่องหมายคำพูดเป็นรูปของแฟรงค์ได้เลย)
+        document.getElementById("highScore").innerText = highScore;
+
         const playerImg = new Image();
-        playerImg.src = "https://i.imgur.com/6VBx3io.png"; // อันนี้เป็นรูปตัวอย่างการ์ตูนน่ารักๆ ครับ
+        playerImg.src = "https://i.imgur.com/6VBx3io.png"; 
 
         function update() {
+            if (isGameOver) return;
+
             player.dy += 0.8; 
             player.y += player.dy;
 
@@ -47,16 +80,18 @@
                 obstacle.x = canvas.width;
                 score++;
                 gameSpeed += 0.1; 
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem("highScore", highScore);
+                    document.getElementById("highScore").innerText = highScore;
+                }
             }
 
             // เช็กชน
             if (player.x < obstacle.x + obstacle.w && 
                 player.x + player.w > obstacle.x && 
                 player.y + player.h > obstacle.y) {
-                alert("Game Over! คะแนนของคุณ: " + score);
-                score = 0;
-                gameSpeed = 6;
-                obstacle.x = canvas.width;
+                triggerGameOver();
             }
 
             draw();
@@ -66,23 +101,65 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // วาดพื้นดิน
+            // พื้นดิน
             ctx.fillStyle = "#4CAF50";
             ctx.fillRect(0, 180, canvas.width, 20);
 
-            // วาดรูปภาพตัวละครแทนสี่เหลี่ยม
-            // ctx.drawImage(รูปภาพ, ตำแหน่ง X, ตำแหน่ง Y, ความกว้าง, ความสูง)
+            // ตัวละคร & อุปสรรค
             ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
-
-            // วาดอุปสรรค (กล่อง)
             ctx.fillStyle = "#795548";
             ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
             
-            document.getElementById("score").innerText = "คะแนน: " + score;
+            document.getElementById("currentScore").innerText = score;
+        }
+
+        function triggerGameOver() {
+            isGameOver = true;
+            document.getElementById("finalScore").innerText = score;
+            document.getElementById("gameOverModal").style.display = "flex";
+            loadLeaderboard(); // โหลดตารางอันดับมาโชว์
+        }
+
+        async function saveScoreAndRestart() {
+            const name = document.getElementById("playerName").value || "ผู้เล่นนิรนาม";
+            
+            // บันทึกลง Supabase (สมมติว่ามีตารางชื่อ leaderboard ที่มีคอลัมน์ name และ score)
+            await _supabase.from('leaderboard').insert([{ name: name, score: score }]);
+
+            // รีเซ็ตเกมเพื่อเล่นต่อ
+            document.getElementById("gameOverModal").style.display = "none";
+            score = 0;
+            gameSpeed = 6;
+            obstacle.x = canvas.width;
+            isGameOver = false;
+            update();
+        }
+
+        async function loadLeaderboard() {
+            const listDiv = document.getElementById("leaderboardList");
+            listDiv.innerHTML = "กำลังโหลดอันดับ...";
+            
+            const { data, error } = await _supabase
+                .from('leaderboard')
+                .select('*')
+                .order('score', { ascending: false })
+                .limit(5); // ดึงมาโชว์ 5 อันดับแรก
+
+            if (error || !data || data.length === 0) {
+                listDiv.innerHTML = "ยังไม่มีประวัติคะแนน (ลองเล่นแล้วบันทึกดูครับ!)";
+                return;
+            }
+
+            listDiv.innerHTML = data.map((item, index) => `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span>${index + 1}. ${item.name}</span>
+                    <b>${item.score} แต้ม</b>
+                </div>
+            `).join('');
         }
 
         function jump() {
-            if (player.grounded) {
+            if (player.grounded && !isGameOver) {
                 player.dy = -12;
                 player.grounded = false;
             }
