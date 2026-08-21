@@ -23,17 +23,21 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         
-        let player = { x: 50, y: 140, w: 30, h: 40, dy: 0, grounded: true };
+        let player = { x: 50, y: 135, w: 40, h: 45, dy: 0, grounded: true };
         let obstacle = { x: 400, y: 145, w: 20, h: 35 };
         let score = 0;
         let gameSpeed = 6;
+
+        // โหลดรูปภาพตัวละคร (เปลี่ยนลิงก์ข้างในเครื่องหมายคำพูดเป็นรูปของแฟรงค์ได้เลย)
+        const playerImg = new Image();
+        playerImg.src = "https://i.imgur.com/6VBx3io.png"; // อันนี้เป็นรูปตัวอย่างการ์ตูนน่ารักๆ ครับ
 
         function update() {
             player.dy += 0.8; 
             player.y += player.dy;
 
-            if (player.y > 140) {
-                player.y = 140;
+            if (player.y > 135) {
+                player.y = 135;
                 player.dy = 0;
                 player.grounded = true;
             }
@@ -66,24 +70,13 @@
             ctx.fillStyle = "#4CAF50";
             ctx.fillRect(0, 180, canvas.width, 20);
 
-            // === โมเดลตัวละคร (เจ้าตัวจิ๋วสุดเท่) ===
-            // 1. ตัวเสื้อ
-            ctx.fillStyle = "#ff5722";
-            ctx.fillRect(player.x, player.y + 15, player.w, 25);
-            
-            // 2. หัว (ผิวตัวละคร)
-            ctx.fillStyle = "#ffccbc";
-            ctx.fillRect(player.x + 5, player.y, 20, 18);
-            
-            // 3. ตา
-            ctx.fillStyle = "#000";
-            ctx.fillRect(player.x + 15, player.y + 5, 4, 4);
+            // วาดรูปภาพตัวละครแทนสี่เหลี่ยม
+            // ctx.drawImage(รูปภาพ, ตำแหน่ง X, ตำแหน่ง Y, ความกว้าง, ความสูง)
+            ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
 
-            // === โมเดลอุปสรรค (กล่องหนาม/สิ่งกีดขวาง) ===
+            // วาดอุปสรรค (กล่อง)
             ctx.fillStyle = "#795548";
             ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
-            ctx.fillStyle = "#d7ccc8";
-            ctx.fillRect(obstacle.x + 4, obstacle.y + 4, 12, 10);
             
             document.getElementById("score").innerText = "คะแนน: " + score;
         }
