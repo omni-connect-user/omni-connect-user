@@ -7,28 +7,55 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: #f0f2f5; color: #1c1e21; padding-bottom: 20px; }
+        body { background-color: #f0f2f5; color: #1c1e21; padding-bottom: 40px; }
         header { background: #ffffff; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e4e6eb; position: sticky; top: 0; z-index: 100; }
         .logo { color: #1877f2; font-size: 22px; font-weight: bold; }
         .container { max-width: 500px; margin: 0 auto; padding: 12px; }
-        .create-post { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .input-author { width: 100%; border: 1px solid #e4e6eb; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; outline: none; }
+
+        /* Profile Box */
+        .profile-card { background: #fff; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px; }
+        .profile-avatar { width: 50px; height: 50px; border-radius: 50%; background: #1877f2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; overflow: hidden; flex-shrink: 0; }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-info { flex: 1; }
+        .profile-info input { width: 100%; border: 1px solid #e4e6eb; padding: 6px 10px; border-radius: 6px; font-size: 14px; font-weight: bold; outline: none; margin-bottom: 4px; }
+        .profile-avatar-upload { font-size: 11px; color: #65676b; cursor: pointer; }
+
+        /* Stories Bar */
+        .stories-wrapper { background: #fff; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .stories-title { font-size: 14px; font-weight: bold; color: #65676b; margin-bottom: 8px; }
+        .stories-container { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+        .story-item { flex: 0 0 80px; height: 120px; border-radius: 10px; background: #e4e6eb; position: relative; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; padding: 6px; text-align: center; color: white; font-size: 11px; font-weight: bold; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+        .story-item.add-story { background: #e7f3ff; color: #1877f2; justify-content: center; align-items: center; border: 2px dashed #1877f2; text-shadow: none; }
+        .story-img { position: absolute; top:0; left:0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        .story-overlay { position: absolute; top:0; left:0; width: 100%; height: 100%; background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7)); z-index: 2; }
+        .story-author { position: relative; z-index: 3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+
+        /* Modal for Viewing Story */
+        .story-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; }
+        .story-modal-content { max-width: 90%; max-height: 80vh; border-radius: 8px; object-fit: contain; }
+        .story-modal-author { color: white; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
+        .story-modal-close { position: absolute; top: 20px; right: 20px; color: white; font-size: 28px; cursor: pointer; }
+
+        /* Post Creation */
+        .create-post { background: #fff; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .create-post textarea { width: 100%; border: none; resize: none; outline: none; font-size: 15px; min-height: 60px; }
         .file-input-wrapper { margin-top: 8px; font-size: 13px; color: #65676b; }
         .post-btn { background: #1877f2; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; width: 100%; margin-top: 8px; cursor: pointer; }
-        .post-btn:disabled { background: #e4e6eb; color: #bcc0c4; }
+
+        /* Feed */
         .feed { display: flex; flex-direction: column; gap: 12px; }
-        .post-card { background: #fff; border-radius: 8px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .post-card { background: #fff; border-radius: 12px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-        .avatar { width: 40px; height: 40px; border-radius: 50%; background: #1877f2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: #1877f2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; overflow: hidden; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .post-author { font-weight: bold; font-size: 14px; }
         .post-time { font-size: 12px; color: #65676b; }
         .post-content { font-size: 15px; line-height: 1.4; margin-bottom: 10px; word-break: break-word; }
         .post-image { width: 100%; border-radius: 8px; margin-bottom: 10px; max-height: 400px; object-fit: cover; }
         .post-stats { font-size: 13px; color: #65676b; margin-bottom: 6px; }
         .post-actions { display: flex; border-top: 1px solid #e4e6eb; padding-top: 8px; gap: 8px; }
-        .action-btn { flex: 1; border: none; padding: 8px 0; border-radius: 4px; cursor: pointer; background: #f0f2f5; font-weight: 600; color: #65676b; }
-        
+        .action-btn { flex: 1; border: none; padding: 8px 0; border-radius: 6px; cursor: pointer; background: #f0f2f5; font-weight: 600; color: #65676b; }
+
         .comments-section { border-top: 1px solid #e4e6eb; margin-top: 10px; padding-top: 10px; display: none; }
         .comment-item { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-start; }
         .comment-avatar { width: 28px; height: 28px; border-radius: 50%; background: #42b72a; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; flex-shrink: 0; }
@@ -47,8 +74,31 @@
     </header>
 
     <div class="container">
+        <!-- Profile Box -->
+        <div class="profile-card">
+            <div class="profile-avatar" id="myAvatarDisplay">U</div>
+            <div class="profile-info">
+                <input type="text" id="myAuthorInput" placeholder="ตั้งชื่อโปรไฟล์ของคุณ..." onchange="saveProfile()">
+                <div class="profile-avatar-upload">
+                    🖼️ เปลี่ยนรูปโปรไฟล์: <input type="file" id="myAvatarFile" accept="image/*" onchange="uploadAvatar()">
+                </div>
+            </div>
+        </div>
+
+        <!-- Stories Section -->
+        <div class="stories-wrapper">
+            <div class="stories-title">สตอรี่ (Stories)</div>
+            <div class="stories-container" id="storiesContainer">
+                <div class="story-item add-story" onclick="document.getElementById('storyFileInput').click()">
+                    <div style="font-size:24px;">+</div>
+                    <div>เพิ่มสตอรี่</div>
+                    <input type="file" id="storyFileInput" accept="image/*" style="display:none;" onchange="uploadStory(this)">
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Post -->
         <div class="create-post">
-            <input type="text" id="authorInput" class="input-author" placeholder="ชื่อของคุณ (ระบุหรือไม่ก็ได้)">
             <textarea id="postInput" placeholder="คุณกำลังคิดอะไรอยู่?"></textarea>
             <div class="file-input-wrapper">
                 📷 เพิ่มรูปภาพ: <input type="file" id="imageInput" accept="image/*">
@@ -56,9 +106,17 @@
             <button class="post-btn" id="postBtn" onclick="sendPost()">โพสต์ข้อความ</button>
         </div>
 
+        <!-- Feed -->
         <div class="feed" id="feed">
             <div style="text-align:center; color:#65676b; padding:20px;">กำลังโหลดโพสต์...</div>
         </div>
+    </div>
+
+    <!-- Story Viewer Modal -->
+    <div class="story-modal" id="storyModal" onclick="closeStoryModal()">
+        <span class="story-modal-close">&times;</span>
+        <div class="story-modal-author" id="storyModalAuthor"></div>
+        <img class="story-modal-content" id="storyModalImg" src="">
     </div>
 
     <script>
@@ -66,13 +124,107 @@
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhenJ3cG1xbnFvaHBldGxrcGl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyOTk2MjUsImV4cCI6MjEwMjg3NTYyNX0.3n8lnroMGKssSHUqRneh7M9uyd1dSxymraZHzwXhhuk";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        async function loadPosts() {
-            const { data: posts, error } = await _supabase
-                .from('posts')
-                .select('*')
-                .order('created_at', { ascending: false });
+        let myAvatarUrl = localStorage.getItem('omni_avatar') || '';
 
+        // Load Profile
+        document.getElementById('myAuthorInput').value = localStorage.getItem('omni_author') || 'แฟรงค์';
+        updateAvatarDisplay();
+
+        function saveProfile() {
+            const name = document.getElementById('myAuthorInput').value.trim();
+            localStorage.setItem('omni_author', name);
+        }
+
+        function updateAvatarDisplay() {
+            const display = document.getElementById('myAvatarDisplay');
+            if (myAvatarUrl) {
+                display.innerHTML = `<img src="${myAvatarUrl}">`;
+            } else {
+                const name = document.getElementById('myAuthorInput').value || 'U';
+                display.innerText = name[0].toUpperCase();
+            }
+        }
+
+        async function uploadAvatar() {
+            const file = document.getElementById('myAvatarFile').files[0];
+            if (!file) return;
+
+            const fileName = `avatar_${Date.now()}.${file.name.split('.').pop()}`;
+            const { data, error } = await _supabase.storage.from('post-images').upload(fileName, file);
+
+            if (!error) {
+                const { data: urlData } = _supabase.storage.from('post-images').getPublicUrl(fileName);
+                myAvatarUrl = urlData.publicUrl;
+                localStorage.setItem('omni_avatar', myAvatarUrl);
+                updateAvatarDisplay();
+            } else {
+                alert('อัปโหลดรูปโปรไฟล์ไม่สำเร็จ: ' + error.message);
+            }
+        }
+
+        // Stories System
+        async function loadStories() {
+            const { data: stories, error } = await _supabase.from('stories').select('*').order('created_at', { ascending: false });
+            const container = document.getElementById('storiesContainer');
+            
+            // Keep Add Story button
+            const addBtnHtml = `
+                <div class="story-item add-story" onclick="document.getElementById('storyFileInput').click()">
+                    <div style="font-size:24px;">+</div>
+                    <div>เพิ่มสตอรี่</div>
+                    <input type="file" id="storyFileInput" accept="image/*" style="display:none;" onchange="uploadStory(this)">
+                </div>
+            `;
+
+            if (error || !stories || stories.length === 0) {
+                container.innerHTML = addBtnHtml;
+                return;
+            }
+
+            const storiesHtml = stories.map(s => `
+                <div class="story-item" onclick="viewStory('${s.author}', '${s.media_url}')">
+                    <img src="${s.media_url}" class="story-img">
+                    <div class="story-overlay"></div>
+                    <div class="story-author">${s.author}</div>
+                </div>
+            `).join('');
+
+            container.innerHTML = addBtnHtml + storiesHtml;
+        }
+
+        async function uploadStory(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const author = document.getElementById('myAuthorInput').value.trim() || 'แฟรงค์';
+            const fileName = `story_${Date.now()}.${file.name.split('.').pop()}`;
+
+            const { data, error } = await _supabase.storage.from('post-images').upload(fileName, file);
+
+            if (!error) {
+                const { data: urlData } = _supabase.storage.from('post-images').getPublicUrl(fileName);
+                await _supabase.from('stories').insert([{ author: author, media_url: urlData.publicUrl }]);
+                loadStories();
+            } else {
+                alert('อัปโหลดสตอรี่ไม่สำเร็จ: ' + error.message);
+            }
+        }
+
+        function viewStory(author, mediaUrl) {
+            document.getElementById('storyModalAuthor').innerText = author;
+            document.getElementById('storyModalImg').src = mediaUrl;
+            document.getElementById('storyModal').style.display = 'flex';
+        }
+
+        function closeStoryModal() {
+            document.getElementById('storyModal').style.display = 'none';
+        }
+
+        // Posts Feed
+        async function loadPosts() {
+            const { data: posts, error } = await _supabase.from('posts').select('*').order('created_at', { ascending: false });
             const feed = document.getElementById('feed');
+
             if (error || !posts || posts.length === 0) {
                 feed.innerHTML = `<div style="text-align:center; color:#65676b; padding:20px;">ยังไม่มีโพสต์ ลองเป็นคนแรกที่โพสต์สิ!</div>`;
                 return;
@@ -123,12 +275,11 @@
 
         async function sendPost() {
             const input = document.getElementById('postInput');
-            const authorInput = document.getElementById('authorInput');
+            const author = document.getElementById('myAuthorInput').value.trim() || 'แฟรงค์';
             const imageInput = document.getElementById('imageInput');
             const btn = document.getElementById('postBtn');
             
             const content = input.value.trim();
-            const author = authorInput.value.trim() || 'ผู้ใช้ OmniConnect';
             const file = imageInput.files[0];
 
             if (!content && !file) return;
@@ -139,37 +290,21 @@
             let imageUrl = null;
 
             if (file) {
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${Date.now()}.${fileExt}`;
-                
-                const { data, error: uploadError } = await _supabase.storage
-                    .from('post-images')
-                    .upload(fileName, file);
+                const fileName = `${Date.now()}.${file.name.split('.').pop()}`;
+                const { data, error: uploadError } = await _supabase.storage.from('post-images').upload(fileName, file);
 
-                if (uploadError) {
-                    alert('อัปโหลดรูปภาพไม่สำเร็จ: ' + uploadError.message);
-                    btn.disabled = false;
-                    btn.innerText = "โพสต์ข้อความ";
-                    return;
+                if (!uploadError) {
+                    const { data: urlData } = _supabase.storage.from('post-images').getPublicUrl(fileName);
+                    imageUrl = urlData.publicUrl;
                 }
-
-                const { data: urlData } = _supabase.storage
-                    .from('post-images')
-                    .getPublicUrl(fileName);
-
-                imageUrl = urlData.publicUrl;
             }
 
-            const { error } = await _supabase
-                .from('posts')
-                .insert([{ content: content, author: author, image_url: imageUrl }]);
+            const { error } = await _supabase.from('posts').insert([{ content: content, author: author, image_url: imageUrl }]);
 
             if (!error) {
                 input.value = '';
                 imageInput.value = '';
                 loadPosts();
-            } else {
-                alert('เกิดข้อผิดพลาดในการโพสต์: ' + error.message);
             }
 
             btn.disabled = false;
@@ -188,15 +323,12 @@
 
         async function sendComment(postId) {
             const input = document.getElementById(`comment-input-${postId}`);
-            const authorInput = document.getElementById('authorInput');
+            const author = document.getElementById('myAuthorInput').value.trim() || 'แฟรงค์';
             const content = input.value.trim();
-            const author = authorInput.value.trim() || 'ผู้ใช้ OmniConnect';
 
             if (!content) return;
 
-            const { error } = await _supabase
-                .from('comments')
-                .insert([{ post_id: postId, author: author, content: content }]);
+            const { error } = await _supabase.from('comments').insert([{ post_id: postId, author: author, content: content }]);
 
             if (!error) {
                 input.value = '';
@@ -205,6 +337,7 @@
             }
         }
 
+        loadStories();
         loadPosts();
     </script>
 </body>
