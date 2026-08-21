@@ -1,37 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>My First 3D Obby</title>
-    <style>body { margin: 0; overflow: hidden; } canvas { display: block; }</style>
+    <title>My First 3D World</title>
+    <style>body { margin: 0; overflow: hidden; }</style>
 </head>
 <body>
-    <!-- โหลด Three.js จาก CDN -->
     <script type="importmap">
         { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
     </script>
     <script type="module">
         import * as THREE from 'three';
 
-        // 1. สร้างฉาก
+        // 1. ตั้งค่าฉาก (Scene)
         const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // เปลี่ยนฉากหลังเป็นสีฟ้าท้องฟ้า
+
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // 2. สร้างพื้น (ฐานเหมือน Roblox)
-        const geometry = new THREE.BoxGeometry(10, 1, 10);
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        // 2. สร้างวัตถุ (กล่องพื้น)
+        const geometry = new THREE.BoxGeometry(2, 0.5, 2);
+        const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 }); // ใช้ StandardMaterial ต้องมีแสง
         const ground = new THREE.Mesh(geometry, material);
         scene.add(ground);
+
+        // 3. เพิ่มแสง (สำคัญมาก! ถ้าไม่มีแสง 3D จะมองไม่เห็นอะไรเลย)
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(1, 1, 1);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040)); // แสงสลัวๆ รอบๆ
 
         camera.position.z = 5;
         camera.position.y = 2;
 
-        // 3. ระบบแสดงผล
+        // 4. ระบบ Animation
         function animate() {
             requestAnimationFrame(animate);
-            ground.rotation.y += 0.01; // หมุนโชว์นิดนึง
+            ground.rotation.y += 0.02; // หมุนช้าๆ
             renderer.render(scene, camera);
         }
         animate();
