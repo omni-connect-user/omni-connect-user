@@ -1,37 +1,165 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
-    <title>3D Test</title>
-    <style>body { margin: 0; overflow: hidden; }</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Roblox 3D Landscape Obby</title>
+    <style>
+        * { touch-action: none; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; }
+        
+        /* แจ้งเตือนถ้าผู้เล่นเปิดเป็นแนวตั้ง */
+        #orientNotice {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); color: white; z-index: 9999;
+            justify-content: center; align-items: center; text-align: center; font-size: 20px;
+        }
+        @media screen and (orientation: portrait) {
+            #orientNotice { display: flex; }
+        }
+
+        /* ปุ่มควบคุมแบบแนวนอน (ซ้ายเดิน-หมุน / ขวากระโดด) */
+        .controls-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        
+        .dpad-container { position: absolute; bottom: 25px; left: 30px; pointer-events: auto; }
+        .dpad { display: grid; grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 50px); gap: 5px; }
+        .btn { background: rgba(255, 255, 255, 0.4); border: 2px solid rgba(255,255,255,0.8); border-radius: 12px; font-weight: bold; font-size: 20px; color: white; display: flex; align-items: center; justify-content: center; }
+        .btn:active { background: rgba(255, 255, 255, 0.8); color: black; }
+        
+        .jump-container { position: absolute; bottom: 30px; right: 40px; pointer-events: auto; }
+        .btn-jump { width: 75px; height: 75px; border-radius: 50%; background: rgba(255, 71, 87, 0.8); border: 3px solid #fff; font-size: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
+
+    <div id="orientNotice">📱 กรุณาเอียงมือถือเป็น "แนวนอน" เพื่อเล่นเกมครับ!</div>
+
+    <div class="controls-layer">
+        <div class="dpad-container">
+            <div class="dpad">
+                <div></div><div class="btn" id="up">▲</div><div></div>
+                <div class="btn" id="left">◀</div><div></div><div class="btn" id="right">▶</div>
+                <div></div><div class="btn" id="down">▼</div><div></div>
+            </div>
+        </div>
+        <div class="jump-container">
+            <div class="btn btn-jump" id="jump">JUMP</div>
+        </div>
+    </div>
+
     <script>
+        // 1. ฉากและกล้อง
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // สร้างกล่องให้ใหญ่ขึ้น
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // เปลี่ยนเป็นสีแดงจะเห็นชัดขึ้น
-        const cube = new THREE.Mesh(geometry, material);
-        scene.add(cube);
+        // แสงสว่าง
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(10, 20, 10);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x707070));
 
-        // เอาตำแหน่งกล่องไว้ที่จุดศูนย์กลางพอดี
-        cube.position.set(0, 0, 0); 
-        camera.position.z = 3; // ดึงกล้องถอยออกมา
+        // 2. สร้างฉาก Obby (จุดเกิด + แท่นกระโดด)
+        const createPlatform = (x, y, z, w, h, d, color) => {
+            const geo = new THREE.BoxGeometry(w, h, d);
+            const mat = new THREE.MeshPhongMaterial({ color });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+            return mesh;
+        };
 
+        createPlatform(0, -0.5, 0, 10, 1, 10, 0x2ed573); // จุดเริ่มต้น (เขียว)
+        createPlatform(0, -0.5, -12, 4, 1, 4, 0xffa500); // ด่าน 1 (ส้ม)
+        createPlatform(0, -0.5, -22, 4, 1, 4, 0xff4757); // ด่าน 2 (แดง)
+
+        // 3. ตัวละคร Roblox
+        const playerGeo = new THREE.BoxGeometry(1, 1.8, 1);
+        const playerMat = new THREE.MeshPhongMaterial({ color: 0x1e90ff }); // สีน้ำเงิน
+        const player = new THREE.Mesh(playerGeo, playerMat);
+        player.position.set(0, 1.4, 0);
+        scene.add(player);
+
+        // ระบบควบคุม
+        let keys = { up: false, down: false, left: false, right: false };
+        let velocityY = 0;
+        let isGrounded = true;
+        let playerAngle = 0;
+
+        const bindBtn = (id, key) => {
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
+            el.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
+        };
+        bindBtn('up', 'up'); bindBtn('down', 'down');
+        bindBtn('left', 'left'); bindBtn('right', 'right');
+
+        document.getElementById('jump').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (isGrounded) { velocityY = 0.22; isGrounded = false; }
+        });
+
+        // Loop เคลื่อนที่
         function animate() {
             requestAnimationFrame(animate);
-            cube.rotation.x += 0.05;
-            cube.rotation.y += 0.05;
+
+            // หมุนตัว เลี้ยวซ้าย/เลี้ยวขวา
+            if (keys.left) playerAngle += 0.04;
+            if (keys.right) playerAngle -= 0.04;
+            player.rotation.y = playerAngle;
+
+            // เดินหน้า / ถอยหลัง ตามทิศทางที่ตัวละครหันหน้าไป
+            const speed = 0.12;
+            if (keys.up) {
+                player.position.x -= Math.sin(playerAngle) * speed;
+                player.position.z -= Math.cos(playerAngle) * speed;
+            }
+            if (keys.down) {
+                player.position.x += Math.sin(playerAngle) * speed;
+                player.position.z += Math.cos(playerAngle) * speed;
+            }
+
+            // แรงโน้มถ่วงและการกระโดด
+            player.position.y += velocityY;
+            if (player.position.y > 1.4) {
+                velocityY -= 0.01;
+                isGrounded = false;
+            } else {
+                player.position.y = 1.4;
+                velocityY = 0;
+                isGrounded = true;
+            }
+
+            // ตกเหว
+            if (player.position.y < -5) {
+                player.position.set(0, 1.4, 0); // รีเซ็ตกลับจุดเกิด
+                playerAngle = 0;
+            }
+
+            // มุมมองกล้องตามหลังแบบ 3D
+            const camDistance = 6;
+            const camHeight = 3;
+            camera.position.x = player.position.x + Math.sin(playerAngle) * camDistance;
+            camera.position.z = player.position.z + Math.cos(playerAngle) * camDistance;
+            camera.position.y = player.position.y + camHeight;
+            camera.lookAt(player.position.x, player.position.y + 0.5, player.position.z);
+
             renderer.render(scene, camera);
         }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
         animate();
     </script>
 </body>
-</html>
+    </html>
+    
