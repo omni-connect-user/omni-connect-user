@@ -7,7 +7,7 @@
     <style>
         body { text-align: center; font-family: Arial, sans-serif; background-color: #f0f2f5; margin-top: 50px; }
         h1 { color: #333; }
-        canvas { background: #ffffff; border: 3px solid #333; display: block; margin: 20px auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        canvas { background: linear-gradient(to bottom, #87CEEB, #e0f6ff); border: 3px solid #333; display: block; margin: 20px auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         #score { font-size: 20px; font-weight: bold; color: #1877f2; }
     </style>
 </head>
@@ -23,23 +23,21 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         
-        let player = { x: 50, y: 150, w: 30, h: 30, dy: 0, grounded: true };
-        let obstacle = { x: 400, y: 150, w: 20, h: 40 };
+        let player = { x: 50, y: 140, w: 30, h: 40, dy: 0, grounded: true };
+        let obstacle = { x: 400, y: 145, w: 20, h: 35 };
         let score = 0;
         let gameSpeed = 6;
 
         function update() {
-            // แรงโน้มถ่วง
             player.dy += 0.8; 
             player.y += player.dy;
 
-            if (player.y > 150) {
-                player.y = 150;
+            if (player.y > 140) {
+                player.y = 140;
                 player.dy = 0;
                 player.grounded = true;
             }
 
-            // อุปสรรควิ่ง
             obstacle.x -= gameSpeed;
             if (obstacle.x < -20) {
                 obstacle.x = canvas.width;
@@ -64,13 +62,28 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // วาดตัวละคร (สีฟ้า)
-            ctx.fillStyle = "#1877f2";
-            ctx.fillRect(player.x, player.y, player.w, player.h);
+            // วาดพื้นดิน
+            ctx.fillStyle = "#4CAF50";
+            ctx.fillRect(0, 180, canvas.width, 20);
+
+            // === โมเดลตัวละคร (เจ้าตัวจิ๋วสุดเท่) ===
+            // 1. ตัวเสื้อ
+            ctx.fillStyle = "#ff5722";
+            ctx.fillRect(player.x, player.y + 15, player.w, 25);
             
-            // วาดอุปสรรค (สีแดง)
-            ctx.fillStyle = "#ff4d4d";
+            // 2. หัว (ผิวตัวละคร)
+            ctx.fillStyle = "#ffccbc";
+            ctx.fillRect(player.x + 5, player.y, 20, 18);
+            
+            // 3. ตา
+            ctx.fillStyle = "#000";
+            ctx.fillRect(player.x + 15, player.y + 5, 4, 4);
+
+            // === โมเดลอุปสรรค (กล่องหนาม/สิ่งกีดขวาง) ===
+            ctx.fillStyle = "#795548";
             ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
+            ctx.fillStyle = "#d7ccc8";
+            ctx.fillRect(obstacle.x + 4, obstacle.y + 4, 12, 10);
             
             document.getElementById("score").innerText = "คะแนน: " + score;
         }
@@ -82,7 +95,6 @@
             }
         }
 
-        // รองรับทั้งการแตะจอมือถือและกดคีย์บอร์ดแบบไม่ดีเลย์
         window.addEventListener("touchstart", (e) => { e.preventDefault(); jump(); }, { passive: false });
         window.addEventListener("mousedown", jump);
         window.addEventListener("keydown", (e) => { if(e.code === "Space") jump(); });
