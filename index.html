@@ -1,66 +1,93 @@
-<script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jump Master!</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; background-color: #f0f2f5; margin-top: 50px; }
+        h1 { color: #333; }
+        canvas { background: #ffffff; border: 3px solid #333; display: block; margin: 20px auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #score { font-size: 20px; font-weight: bold; color: #1877f2; }
+    </style>
+</head>
+<body>
+
+    <h1>Jump Master!</h1>
+    <p>แตะที่หน้าจอหรือกด Spacebar เพื่อกระโดด!</p>
     
-    // ตั้งค่าตัวละคร
-    let player = { x: 50, y: 150, w: 30, h: 30, dy: 0, jump: false, grounded: true };
-    let obstacle = { x: 400, y: 150, w: 20, h: 40 };
-    let score = 0;
-    let gameSpeed = 6; // ปรับความเร็วตรงนี้ได้เลย (ยิ่งเยอะยิ่งเร็ว)
+    <canvas id="gameCanvas" width="400" height="200"></canvas>
+    <div id="score">คะแนน: 0</div>
 
-    function update() {
-        // แรงโน้มถ่วง
-        player.dy += 0.8; 
-        player.y += player.dy;
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        
+        let player = { x: 50, y: 150, w: 30, h: 30, dy: 0, grounded: true };
+        let obstacle = { x: 400, y: 150, w: 20, h: 40 };
+        let score = 0;
+        let gameSpeed = 6;
 
-        if (player.y > 150) {
-            player.y = 150;
-            player.dy = 0;
-            player.grounded = true;
+        function update() {
+            // แรงโน้มถ่วง
+            player.dy += 0.8; 
+            player.y += player.dy;
+
+            if (player.y > 150) {
+                player.y = 150;
+                player.dy = 0;
+                player.grounded = true;
+            }
+
+            // อุปสรรควิ่ง
+            obstacle.x -= gameSpeed;
+            if (obstacle.x < -20) {
+                obstacle.x = canvas.width;
+                score++;
+                gameSpeed += 0.1; 
+            }
+
+            // เช็กชน
+            if (player.x < obstacle.x + obstacle.w && 
+                player.x + player.w > obstacle.x && 
+                player.y + player.h > obstacle.y) {
+                alert("Game Over! คะแนนของคุณ: " + score);
+                score = 0;
+                gameSpeed = 6;
+                obstacle.x = canvas.width;
+            }
+
+            draw();
+            requestAnimationFrame(update);
         }
 
-        // อุปสรรคเลื่อน
-        obstacle.x -= gameSpeed;
-        if (obstacle.x < -20) {
-            obstacle.x = canvas.width;
-            score++;
-            gameSpeed += 0.1; // ความยากจะค่อยๆ เพิ่มขึ้น
-        }
-
-        // เช็กการชน (ตัดความหน่วงออก)
-        if (player.x < obstacle.x + obstacle.w && 
-            player.x + player.w > obstacle.x && 
-            player.y + player.h > obstacle.y) {
-            alert("Game Over! คะแนน: " + score);
-            score = 0;
-            gameSpeed = 6;
-            obstacle.x = canvas.width;
-        }
-
-        draw();
-        requestAnimationFrame(update);
-    }
-
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "blue";
-        ctx.fillRect(player.x, player.y, player.w, player.h);
-        ctx.fillStyle = "red";
-        ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
-        document.getElementById("score").innerText = "คะแนน: " + score;
-    }
-
-    // แก้จุด Delay: ใช้ event 'touchstart' สำหรับมือถือ และ 'keydown' สำหรับคอม
-    function jump() {
-        if (player.grounded) {
-            player.dy = -12; // แรงกระโดด
-            player.grounded = false;
-        }
-    }
-
-    window.addEventListener("touchstart", jump);
-    window.addEventListener("keydown", (e) => { if(e.code === "Space") jump(); });
-
-    update();
-            </script>
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             
+            // วาดตัวละคร (สีฟ้า)
+            ctx.fillStyle = "#1877f2";
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+            
+            // วาดอุปสรรค (สีแดง)
+            ctx.fillStyle = "#ff4d4d";
+            ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
+            
+            document.getElementById("score").innerText = "คะแนน: " + score;
+        }
+
+        function jump() {
+            if (player.grounded) {
+                player.dy = -12;
+                player.grounded = false;
+            }
+        }
+
+        // รองรับทั้งการแตะจอมือถือและกดคีย์บอร์ดแบบไม่ดีเลย์
+        window.addEventListener("touchstart", (e) => { e.preventDefault(); jump(); }, { passive: false });
+        window.addEventListener("mousedown", jump);
+        window.addEventListener("keydown", (e) => { if(e.code === "Space") jump(); });
+
+        update();
+    </script>
+</body>
+</html>
