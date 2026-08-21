@@ -6,12 +6,13 @@
     <title>OmniConnect</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background-color: #f0f2f5; color: #1c1e21; padding-bottom: 20px; }
         header { background: #ffffff; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e4e6eb; position: sticky; top: 0; z-index: 100; }
         .logo { color: #1877f2; font-size: 22px; font-weight: bold; }
         .container { max-width: 500px; margin: 0 auto; padding: 12px; }
         .create-post { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .input-author { width: 100%; border: 1px solid #e4e6eb; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; outline: none; }
         .create-post textarea { width: 100%; border: none; resize: none; outline: none; font-size: 15px; min-height: 60px; }
         .post-btn { background: #1877f2; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; width: 100%; margin-top: 8px; cursor: pointer; }
         .post-btn:disabled { background: #e4e6eb; color: #bcc0c4; }
@@ -22,8 +23,9 @@
         .post-author { font-weight: bold; font-size: 14px; }
         .post-time { font-size: 12px; color: #65676b; }
         .post-content { font-size: 15px; line-height: 1.4; margin-bottom: 10px; word-break: break-word; }
+        .post-stats { font-size: 13px; color: #65676b; margin-bottom: 6px; }
         .post-actions { display: flex; border-top: 1px solid #e4e6eb; padding-top: 8px; color: #65676b; font-weight: 600; font-size: 14px; }
-        .action-btn { flex: 1; text-align: center; padding: 6px 0; border-radius: 4px; cursor: pointer; }
+        .action-btn { flex: 1; text-align: center; padding: 6px 0; border-radius: 4px; cursor: pointer; user-select: none; }
         .action-btn:active { background: #f2f2f2; }
     </style>
 </head>
@@ -34,25 +36,22 @@
     </header>
 
     <div class="container">
-        <!-- ช่องเขียนโพสต์ -->
         <div class="create-post">
+            <input type="text" id="authorInput" class="input-author" placeholder="ชื่อของคุณ (ระบุหรือไม่ก็ได้)">
             <textarea id="postInput" placeholder="คุณกำลังคิดอะไรอยู่?"></textarea>
             <button class="post-btn" id="postBtn" onclick="sendPost()">โพสต์ข้อความ</button>
         </div>
 
-        <!-- ฟีดแสดงโพสต์ -->
         <div class="feed" id="feed">
             <div style="text-align:center; color:#65676b; padding:20px;">กำลังโหลดโพสต์...</div>
         </div>
     </div>
 
     <script>
-        // เชื่อมต่อ Supabase ของน้อง
         const SUPABASE_URL = "https://razrwpmqnqohpetlkpiw.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhenJ3cG1xbnFvaHBldGxrcGl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyOTk2MjUsImV4cCI6MjEwMjg3NTYyNX0.3n8lnroMGKssSHUqRneh7M9uyd1dSxymraZHzwXhhuk";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // โหลดรายการโพสต์
         async function loadPosts() {
             const { data, error } = await _supabase
                 .from('posts')
@@ -60,24 +59,7 @@
                 .order('created_at', { ascending: false });
 
             const feed = document.getElementById('feed');
-            
-            if (error) {
-                // กรณีที่ยังไม่ได้สร้างตารางใน Supabase
-                feed.innerHTML = `
-                    <div class="post-card">
-                        <div class="post-header">
-                            <div class="avatar">O</div>
-                            <div>
-                                <div class="post-author">OmniConnect Official</div>
-                                <div class="post-time">ระบบ</div>
-                            </div>
-                        </div>
-                        <div class="post-content">ยินดีต้อนรับสู่ OmniConnect! ระบบฐานข้อมูลเชื่อมต่อเรียบร้อยแล้ว</div>
-                    </div>`;
-                return;
-            }
-
-            if (!data || data.length === 0) {
+            if (error || !data || data.length === 0) {
                 feed.innerHTML = `<div style="text-align:center; color:#65676b; padding:20px;">ยังไม่มีโพสต์ ลองเป็นคนแรกที่โพสต์สิ!</div>`;
                 return;
             }
@@ -92,19 +74,21 @@
                         </div>
                     </div>
                     <div class="post-content">${post.content}</div>
+                    <div class="post-stats">👍 ${post.likes || 0} คนถูกใจสิ่งนี้</div>
                     <div class="post-actions">
-                        <div class="action-btn">👍 ถูกใจ</div>
-                        <div class="action-btn">💬 ความคิดเห็น</div>
+                        <div class="action-btn" onclick="likePost(${post.id})">👍 ถูกใจ</div>
+                        <div class="action-btn" onclick="alert('ระบบคอมเมนต์กำลังตามมาเร็วๆ นี้!')">💬 ความคิดเห็น</div>
                     </div>
                 </div>
             `).join('');
         }
 
-        // ส่งโพสต์ใหม่
         async function sendPost() {
             const input = document.getElementById('postInput');
+            const authorInput = document.getElementById('authorInput');
             const btn = document.getElementById('postBtn');
             const content = input.value.trim();
+            const author = authorInput.value.trim() || 'ผู้ใช้ OmniConnect';
 
             if (!content) return;
 
@@ -113,10 +97,10 @@
 
             const { error } = await _supabase
                 .from('posts')
-                .insert([{ content: content, author: 'ผู้ใช้ OmniConnect' }]);
+                .insert([{ content: content, author: author }]);
 
             if (error) {
-                alert('ต้องไปสร้างตาราง posts ใน Supabase ก่อนนะครับ');
+                alert('เกิดข้อผิดพลาดในการโพสต์');
             } else {
                 input.value = '';
                 loadPosts();
@@ -126,7 +110,11 @@
             btn.innerText = "โพสต์ข้อความ";
         }
 
-        // โหลดโพสต์ทันทีที่เปิดหน้าเว็บ
+        async function likePost(postId) {
+            await _supabase.rpc('increment_likes', { row_id: postId });
+            loadPosts();
+        }
+
         loadPosts();
     </script>
 </body>
