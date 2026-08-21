@@ -1,44 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>My First 3D World</title>
+    <title>3D Test</title>
     <style>body { margin: 0; overflow: hidden; }</style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-    <script type="importmap">
-        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-    </script>
-    <script type="module">
-        import * as THREE from 'three';
-
-        // 1. ตั้งค่าฉาก (Scene)
+    <script>
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); // เปลี่ยนฉากหลังเป็นสีฟ้าท้องฟ้า
+        scene.background = new THREE.Color(0x87CEEB);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // 2. สร้างวัตถุ (กล่องพื้น)
-        const geometry = new THREE.BoxGeometry(2, 0.5, 2);
-        const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 }); // ใช้ StandardMaterial ต้องมีแสง
-        const ground = new THREE.Mesh(geometry, material);
-        scene.add(ground);
+        // สร้างกล่องให้ใหญ่ขึ้น
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // เปลี่ยนเป็นสีแดงจะเห็นชัดขึ้น
+        const cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
 
-        // 3. เพิ่มแสง (สำคัญมาก! ถ้าไม่มีแสง 3D จะมองไม่เห็นอะไรเลย)
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(1, 1, 1);
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0x404040)); // แสงสลัวๆ รอบๆ
+        // เอาตำแหน่งกล่องไว้ที่จุดศูนย์กลางพอดี
+        cube.position.set(0, 0, 0); 
+        camera.position.z = 3; // ดึงกล้องถอยออกมา
 
-        camera.position.z = 5;
-        camera.position.y = 2;
-
-        // 4. ระบบ Animation
         function animate() {
             requestAnimationFrame(animate);
-            ground.rotation.y += 0.02; // หมุนช้าๆ
+            cube.rotation.x += 0.05;
+            cube.rotation.y += 0.05;
             renderer.render(scene, camera);
         }
         animate();
