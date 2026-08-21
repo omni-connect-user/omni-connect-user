@@ -1,67 +1,133 @@
 <!DOCTYPE html>
-<html lang="auto">
+<html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OmniConnect</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: #f0f2f5; color: #1c1e21; padding-bottom: 20px; }
+        header { background: #ffffff; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e4e6eb; position: sticky; top: 0; z-index: 100; }
+        .logo { color: #1877f2; font-size: 22px; font-weight: bold; }
+        .container { max-width: 500px; margin: 0 auto; padding: 12px; }
+        .create-post { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .create-post textarea { width: 100%; border: none; resize: none; outline: none; font-size: 15px; min-height: 60px; }
+        .post-btn { background: #1877f2; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; width: 100%; margin-top: 8px; cursor: pointer; }
+        .post-btn:disabled { background: #e4e6eb; color: #bcc0c4; }
+        .feed { display: flex; flex-direction: column; gap: 12px; }
+        .post-card { background: #fff; border-radius: 8px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: #1877f2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .post-author { font-weight: bold; font-size: 14px; }
+        .post-time { font-size: 12px; color: #65676b; }
+        .post-content { font-size: 15px; line-height: 1.4; margin-bottom: 10px; word-break: break-word; }
+        .post-actions { display: flex; border-top: 1px solid #e4e6eb; padding-top: 8px; color: #65676b; font-weight: 600; font-size: 14px; }
+        .action-btn { flex: 1; text-align: center; padding: 6px 0; border-radius: 4px; cursor: pointer; }
+        .action-btn:active { background: #f2f2f2; }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans">
+<body>
 
-    <!-- Header -->
-    <header class="bg-white shadow-sm sticky top-0 z-50 px-4 py-2 flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-blue-600">OmniConnect</h1>
-        <div class="flex space-x-2">
-            <button class="bg-gray-200 p-2 rounded-full">🔍</button>
-            <button class="bg-gray-200 p-2 rounded-full">💬</button>
-        </div>
+    <header>
+        <div class="logo">OmniConnect</div>
     </header>
 
-    <!-- Main Feed -->
-    <main class="max-w-lg mx-auto mt-4 px-2">
-        <!-- Post Box -->
-        <div class="bg-white p-4 rounded-lg shadow mb-4">
-            <div class="flex items-center space-x-2">
-                <div class="w-10 h-10 bg-gray-300 rounded-full"></div>
-                <input type="text" id="postInput" class="bg-gray-100 w-full rounded-full py-2 px-4 outline-none" placeholder="...">
-            </div>
+    <div class="container">
+        <!-- ช่องเขียนโพสต์ -->
+        <div class="create-post">
+            <textarea id="postInput" placeholder="คุณกำลังคิดอะไรอยู่?"></textarea>
+            <button class="post-btn" id="postBtn" onclick="sendPost()">โพสต์ข้อความ</button>
         </div>
 
-        <!-- Newsfeed Post -->
-        <div class="bg-white rounded-lg shadow mb-4 p-4">
-            <div class="flex items-center space-x-2 mb-2">
-                <div class="w-10 h-10 bg-blue-500 rounded-full"></div>
-                <div>
-                    <h2 class="font-semibold text-sm">OmniConnect Official</h2>
-                    <p class="text-xs text-gray-500">Just now</p>
-                </div>
-            </div>
-            <p id="welcomeText" class="text-gray-800 my-2"></p>
-            <div class="flex justify-around border-t pt-2 text-gray-500 text-sm">
-                <button>👍 Like</button>
-                <button>💬 Comment</button>
-                <button>↗️ Share</button>
-            </div>
+        <!-- ฟีดแสดงโพสต์ -->
+        <div class="feed" id="feed">
+            <div style="text-align:center; color:#65676b; padding:20px;">กำลังโหลดโพสต์...</div>
         </div>
-    </main>
+    </div>
 
-    <!-- Automatic Language Script -->
     <script>
-        const userLang = navigator.language || navigator.userLanguage; 
-        
-        const translations = {
-            "th": { placeholder: "คุณกำลังคิดอะไรอยู่?", welcome: "ยินดีต้อนรับสู่ OmniConnect!" },
-            "en": { placeholder: "What's on your mind?", welcome: "Welcome to OmniConnect!" },
-            "es": { placeholder: "¿En qué estás pensando?", welcome: "¡Bienvenido a OmniConnect!" },
-            "zh": { placeholder: "你在想什么？", welcome: "欢迎来到 OmniConnect！" }
-        };
+        // เชื่อมต่อ Supabase ของน้อง
+        const SUPABASE_URL = "https://razrwpmqnqohpetlkpiw.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhenJ3cG1xbnFvaHBldGxrcGl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyOTk2MjUsImV4cCI6MjEwMjg3NTYyNX0.3n8lnroMGKssSHUqRneh7M9uyd1dSxymraZHzwXhhuk";
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const langKey = userLang.startsWith("th") ? "th" : 
-                        userLang.startsWith("es") ? "es" : 
-                        userLang.startsWith("zh") ? "zh" : "en";
+        // โหลดรายการโพสต์
+        async function loadPosts() {
+            const { data, error } = await _supabase
+                .from('posts')
+                .select('*')
+                .order('created_at', { ascending: false });
 
-        document.getElementById("postInput").placeholder = translations[langKey].placeholder;
-        document.getElementById("welcomeText").innerText = translations[langKey].welcome;
+            const feed = document.getElementById('feed');
+            
+            if (error) {
+                // กรณีที่ยังไม่ได้สร้างตารางใน Supabase
+                feed.innerHTML = `
+                    <div class="post-card">
+                        <div class="post-header">
+                            <div class="avatar">O</div>
+                            <div>
+                                <div class="post-author">OmniConnect Official</div>
+                                <div class="post-time">ระบบ</div>
+                            </div>
+                        </div>
+                        <div class="post-content">ยินดีต้อนรับสู่ OmniConnect! ระบบฐานข้อมูลเชื่อมต่อเรียบร้อยแล้ว</div>
+                    </div>`;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                feed.innerHTML = `<div style="text-align:center; color:#65676b; padding:20px;">ยังไม่มีโพสต์ ลองเป็นคนแรกที่โพสต์สิ!</div>`;
+                return;
+            }
+
+            feed.innerHTML = data.map(post => `
+                <div class="post-card">
+                    <div class="post-header">
+                        <div class="avatar">${(post.author || 'U')[0].toUpperCase()}</div>
+                        <div>
+                            <div class="post-author">${post.author || 'ผู้ใช้งานทั่วไป'}</div>
+                            <div class="post-time">${new Date(post.created_at).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}</div>
+                        </div>
+                    </div>
+                    <div class="post-content">${post.content}</div>
+                    <div class="post-actions">
+                        <div class="action-btn">👍 ถูกใจ</div>
+                        <div class="action-btn">💬 ความคิดเห็น</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ส่งโพสต์ใหม่
+        async function sendPost() {
+            const input = document.getElementById('postInput');
+            const btn = document.getElementById('postBtn');
+            const content = input.value.trim();
+
+            if (!content) return;
+
+            btn.disabled = true;
+            btn.innerText = "กำลังโพสต์...";
+
+            const { error } = await _supabase
+                .from('posts')
+                .insert([{ content: content, author: 'ผู้ใช้ OmniConnect' }]);
+
+            if (error) {
+                alert('ต้องไปสร้างตาราง posts ใน Supabase ก่อนนะครับ');
+            } else {
+                input.value = '';
+                loadPosts();
+            }
+
+            btn.disabled = false;
+            btn.innerText = "โพสต์ข้อความ";
+        }
+
+        // โหลดโพสต์ทันทีที่เปิดหน้าเว็บ
+        loadPosts();
     </script>
 </body>
 </html>
