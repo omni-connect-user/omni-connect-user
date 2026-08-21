@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Roblox 3D Obby Fixed</title>
+    <title>Real Roblox 3D Obby</title>
     <style>
         * { touch-action: none; user-select: none; }
         body { margin: 0; overflow: hidden; background: #000; font-family: Arial, sans-serif; }
@@ -17,7 +17,7 @@
 
         .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         
-        #joystick-zone { position: absolute; bottom: 30px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.25); border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; pointer-events: auto; }
+        #joystick-zone { position: absolute; bottom: 35px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.25); border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; pointer-events: auto; }
         #joystick-stick { position: absolute; top: 35px; left: 35px; width: 50px; height: 50px; background: rgba(255,255,255,0.9); border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
         
         #jump-btn { position: absolute; bottom: 40px; right: 50px; width: 80px; height: 80px; background: rgba(255, 71, 87, 0.9); border: 3px solid #fff; border-radius: 50%; color: white; font-weight: bold; font-size: 18px; pointer-events: auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
@@ -38,9 +38,9 @@
     </div>
 
     <script>
-        // 1. Setup Scene
+        // 1. Scene & Renderer Setup
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x74b9ff);
+        scene.background = new THREE.Color(0x64b5f6); // สีฟ้าท้องฟ้า Roblox
 
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -50,9 +50,9 @@
         const light = new THREE.DirectionalLight(0xffffff, 1.2);
         light.position.set(20, 40, 20);
         scene.add(light);
-        scene.add(new THREE.AmbientLight(0x707070));
+        scene.add(new THREE.AmbientLight(0x888888));
 
-        // 2. Platforms Data (Obby Course)
+        // 2. Create Obby Platforms (ระยะใกล้ กระโดดง่ายและสมจริง)
         const platforms = [];
         function createPlatform(x, y, z, w, h, d, color, isCP = false) {
             const geo = new THREE.BoxGeometry(w, h, d);
@@ -65,16 +65,17 @@
             return mesh;
         }
 
-        // สร้างด่าน Obby
-        createPlatform(0, -0.5, 0, 8, 1, 8, 0x2ed573);       // Start
-        createPlatform(0, -0.5, -10, 4, 1, 4, 0xffa500);     // Platform 1
-        createPlatform(0, 0.5, -18, 4, 1, 4, 0xffa500);      // Platform 2
-        createPlatform(0, 1.5, -26, 4, 1, 4, 0xffa500);      // Platform 3
-        createPlatform(0, 2.5, -36, 8, 1, 8, 0x9b59b6, true); // Checkpoint (ม่วง)
-        createPlatform(0, 3.5, -48, 3, 1, 3, 0xe74c3c);     // Platform 4
-        createPlatform(0, 4.5, -58, 10, 1, 10, 0xf1c40f);   // Goal
+        // ปรับระยะบล็อกให้อยู่ใกล้กันกำลังดี (ระยะห่าง 5-6 หน่วย)
+        createPlatform(0, -0.5, 0, 8, 1, 8, 0x2ed573);       // Start (เขียว)
+        createPlatform(0, 0.0, -6, 3, 1, 3, 0xffa500);      // Step 1
+        createPlatform(0, 0.5, -11, 3, 1, 3, 0xffa500);     // Step 2
+        createPlatform(0, 1.0, -16, 3, 1, 3, 0xffa500);     // Step 3
+        createPlatform(0, 1.5, -22, 6, 1, 6, 0x9b59b6, true); // Checkpoint (ม่วง)
+        createPlatform(0, 2.0, -28, 2.5, 1, 2.5, 0xe74c3c); // Step 4
+        createPlatform(0, 2.5, -34, 2.5, 1, 2.5, 0xe74c3c); // Step 5
+        createPlatform(0, 3.0, -41, 8, 1, 8, 0xf1c40f);     // Goal (เหลือง)
 
-        // 3. Roblox Character with Details & Clothes
+        // 3. Roblox Character Construction (ตั้งทิศหน้าถูกต้อง)
         const playerGroup = new THREE.Group();
 
         function createBox(w, h, d, color, x, y, z) {
@@ -85,16 +86,18 @@
             return mesh;
         }
 
-        // Head + Face + Hair
+        // หน้าตั้งไปทางทิศ -Z (ด้านหน้าจริง)
         const head = createBox(0.6, 0.6, 0.6, 0xffcc99, 0, 1.5, 0);
-        const hair = createBox(0.64, 0.2, 0.64, 0x331a00, 0, 1.82, 0); // ผม
-        const eyeL = createBox(0.08, 0.12, 0.05, 0x000000, -0.15, 1.55, -0.31); // ตาซ้าย
-        const eyeR = createBox(0.08, 0.12, 0.05, 0x000000, 0.15, 1.55, -0.31);  // ตาขวา
-        
-        // Shirt Body
-        const torso = createBox(0.7, 0.8, 0.4, 0x0984e3, 0, 0.8, 0); // เสื้อสีน้ำเงิน
-        
-        // Arms
+        const hair = createBox(0.64, 0.2, 0.64, 0x331a00, 0, 1.82, 0); 
+        const eyeL = createBox(0.08, 0.12, 0.05, 0x000000, -0.15, 1.55, -0.31); // ตาอยู่ฝั่งหน้า (-Z)
+        const eyeR = createBox(0.08, 0.12, 0.05, 0x000000, 0.15, 1.55, -0.31);
+        const mouth = createBox(0.2, 0.05, 0.05, 0xd63031, 0, 1.4, -0.31);     // ปากอยู่ฝั่งหน้า
+
+        // เสื้อ Roblox
+        const torso = createBox(0.7, 0.8, 0.4, 0x0984e3, 0, 0.8, 0);
+        const shirtLogo = createBox(0.3, 0.3, 0.02, 0xffffff, 0, 0.85, -0.21); // โลโก้เสื้อหน้า
+
+        // แขน
         const leftArmGroup = new THREE.Group();
         leftArmGroup.position.set(-0.52, 1.1, 0);
         const leftArm = createBox(0.28, 0.8, 0.28, 0xffcc99, 0, -0.4, 0);
@@ -105,10 +108,10 @@
         const rightArm = createBox(0.28, 0.8, 0.28, 0xffcc99, 0, -0.4, 0);
         rightArmGroup.add(rightArm);
 
-        // Legs (Pants)
+        // ขา (กางเกง)
         const leftLegGroup = new THREE.Group();
         leftLegGroup.position.set(-0.2, 0.4, 0);
-        const leftLeg = createBox(0.28, 0.8, 0.28, 0x2d3436, 0, -0.4, 0); // กางเกงดำ
+        const leftLeg = createBox(0.28, 0.8, 0.28, 0x2d3436, 0, -0.4, 0);
         leftLegGroup.add(leftLeg);
 
         const rightLegGroup = new THREE.Group();
@@ -116,10 +119,10 @@
         const rightLeg = createBox(0.28, 0.8, 0.28, 0x2d3436, 0, -0.4, 0);
         rightLegGroup.add(rightLeg);
 
-        playerGroup.add(head, hair, eyeL, eyeR, torso, leftArmGroup, rightArmGroup, leftLegGroup, rightLegGroup);
+        playerGroup.add(head, hair, eyeL, eyeR, mouth, torso, shirtLogo, leftArmGroup, rightArmGroup, leftLegGroup, rightLegGroup);
         scene.add(playerGroup);
 
-        // 4. Game Logic & Controls
+        // 4. Input & Physics Setup
         let joyX = 0, joyY = 0;
         let camYaw = 0, camPitch = 0.3;
         let velocityY = 0;
@@ -129,7 +132,7 @@
         let spawnPoint = new THREE.Vector3(0, 2, 0);
         playerGroup.position.copy(spawnPoint);
 
-        // Joystick Input
+        // Joystick Controls
         const zone = document.getElementById('joystick-zone');
         const stick = document.getElementById('joystick-stick');
         let joyTouchId = null;
@@ -169,7 +172,7 @@
             }
         });
 
-        // Touch Look Angle
+        // Touch Look Angle (ปัดซ้ายไปซ้าย ปัดขวาไปขวา)
         let lookTouchId = null, lastTouchX = 0, lastTouchY = 0;
         window.addEventListener('touchstart', (e) => {
             for (let touch of e.changedTouches) {
@@ -187,7 +190,7 @@
                     const dx = touch.clientX - lastTouchX;
                     const dy = touch.clientY - lastTouchY;
                     
-                    camYaw -= dx * 0.005;
+                    camYaw += dx * 0.005; // ปรับทิศทางกล้องให้ตรงตามมือปัด
                     camPitch = Math.max(0.1, Math.min(1.2, camPitch + dy * 0.005));
 
                     lastTouchX = touch.clientX;
@@ -211,40 +214,40 @@
             }
         });
 
-        // Main Game Loop
+        // Main Loop
         function animate() {
             requestAnimationFrame(animate);
 
-            // 1. Correct Movement & Direction
+            // คำนวณการเคลื่อนที่สัมพัทธ์กับมุมกล้อง
             const isMoving = Math.abs(joyX) > 0.1 || Math.abs(joyY) > 0.1;
             if (isMoving) {
-                const moveAngle = Math.atan2(joyX, -joyY); // ดันขึ้น = เดินหน้าตรงๆ
+                const moveAngle = Math.atan2(joyX, -joyY);
                 const speed = 0.12;
 
-                playerGroup.position.x += Math.sin(camYaw + moveAngle) * speed;
-                playerGroup.position.z += Math.cos(camYaw + moveAngle) * speed;
+                const targetAngle = camYaw + moveAngle;
+                playerGroup.position.x += Math.sin(targetAngle) * speed;
+                playerGroup.position.z -= Math.cos(targetAngle) * speed;
 
-                playerGroup.rotation.y = camYaw + moveAngle;
+                playerGroup.rotation.y = targetAngle; // ตัวละครหันหน้าไปทิศที่เดินเป๊ะๆ
 
-                // Arm/Leg Walking Animation
+                // อนิเมชันเดิน
                 animTime += 0.15;
                 leftArmGroup.rotation.x = Math.sin(animTime) * 0.6;
                 rightArmGroup.rotation.x = -Math.sin(animTime) * 0.6;
                 leftLegGroup.rotation.x = -Math.sin(animTime) * 0.6;
                 rightLegGroup.rotation.x = Math.sin(animTime) * 0.6;
             } else {
-                // Reset Pose when Idle
                 leftArmGroup.rotation.x = 0;
                 rightArmGroup.rotation.x = 0;
                 leftLegGroup.rotation.x = 0;
                 rightLegGroup.rotation.x = 0;
             }
 
-            // 2. Gravity Physics
+            // ฟิสิกส์แรงโน้มถ่วง
             velocityY -= 0.01;
             playerGroup.position.y += velocityY;
 
-            // 3. Collision Detection with Platforms
+            // เช็กชนบล็อก (Collision)
             isGrounded = false;
             const pPos = playerGroup.position;
 
@@ -252,7 +255,6 @@
                 const b = plat.position;
                 const dim = plat.userData;
 
-                // Check X, Z bounds
                 if (pPos.x >= b.x - dim.w/2 - 0.3 && pPos.x <= b.x + dim.w/2 + 0.3 &&
                     pPos.z >= b.z - dim.d/2 - 0.3 && pPos.z <= b.z + dim.d/2 + 0.3) {
                     
@@ -262,7 +264,6 @@
                         velocityY = 0;
                         isGrounded = true;
 
-                        // Trigger Checkpoint
                         if (dim.isCP) {
                             spawnPoint.set(b.x, topY + 1.5, b.z);
                             const msg = document.getElementById('msg-box');
@@ -274,16 +275,16 @@
                 }
             }
 
-            // 4. Fall & Respawn
-            if (pPos.y < -12) {
+            // ตกเหวแล้วฟื้นที่จุดเช็คพอยต์
+            if (pPos.y < -10) {
                 playerGroup.position.copy(spawnPoint);
                 velocityY = 0;
             }
 
-            // 5. Camera Follow
-            const camDist = 6;
+            // กล้องติดตามตัวละครจากด้านหลัง
+            const camDist = 5.5;
             camera.position.x = playerGroup.position.x - Math.sin(camYaw) * Math.cos(camPitch) * camDist;
-            camera.position.z = playerGroup.position.z - Math.cos(camYaw) * Math.cos(camPitch) * camDist;
+            camera.position.z = playerGroup.position.z + Math.cos(camYaw) * Math.cos(camPitch) * camDist;
             camera.position.y = playerGroup.position.y + Math.sin(camPitch) * camDist + 1;
             camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1, playerGroup.position.z);
 
