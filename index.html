@@ -14,7 +14,9 @@
         .create-post { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .input-author { width: 100%; border: 1px solid #e4e6eb; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; outline: none; }
         .create-post textarea { width: 100%; border: none; resize: none; outline: none; font-size: 15px; min-height: 60px; }
+        .file-input-wrapper { margin-top: 8px; font-size: 13px; color: #65676b; }
         .post-btn { background: #1877f2; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; width: 100%; margin-top: 8px; cursor: pointer; }
+        .post-btn:disabled { background: #e4e6eb; color: #bcc0c4; }
         .feed { display: flex; flex-direction: column; gap: 12px; }
         .post-card { background: #fff; border-radius: 8px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
@@ -22,11 +24,11 @@
         .post-author { font-weight: bold; font-size: 14px; }
         .post-time { font-size: 12px; color: #65676b; }
         .post-content { font-size: 15px; line-height: 1.4; margin-bottom: 10px; word-break: break-word; }
+        .post-image { width: 100%; border-radius: 8px; margin-bottom: 10px; max-height: 400px; object-fit: cover; }
         .post-stats { font-size: 13px; color: #65676b; margin-bottom: 6px; }
         .post-actions { display: flex; border-top: 1px solid #e4e6eb; padding-top: 8px; gap: 8px; }
         .action-btn { flex: 1; border: none; padding: 8px 0; border-radius: 4px; cursor: pointer; background: #f0f2f5; font-weight: 600; color: #65676b; }
         
-        /* สไตล์ส่วนคอมเมนต์ปรับปรุงใหม่ */
         .comments-section { border-top: 1px solid #e4e6eb; margin-top: 10px; padding-top: 10px; display: none; }
         .comment-item { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-start; }
         .comment-avatar { width: 28px; height: 28px; border-radius: 50%; background: #42b72a; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; flex-shrink: 0; }
@@ -48,6 +50,9 @@
         <div class="create-post">
             <input type="text" id="authorInput" class="input-author" placeholder="ชื่อของคุณ (ระบุหรือไม่ก็ได้)">
             <textarea id="postInput" placeholder="คุณกำลังคิดอะไรอยู่?"></textarea>
+            <div class="file-input-wrapper">
+                📷 เพิ่มรูปภาพ: <input type="file" id="imageInput" accept="image/*">
+            </div>
             <button class="post-btn" id="postBtn" onclick="sendPost()">โพสต์ข้อความ</button>
         </div>
 
@@ -87,13 +92,13 @@
                             </div>
                         </div>
                         <div class="post-content">${post.content}</div>
+                        ${post.image_url ? `<img src="${post.image_url}" class="post-image" alt="Post Image">` : ''}
                         <div class="post-stats">👍 ${post.likes || 0} คนถูกใจสิ่งนี้ • 💬 ${postComments.length} ความคิดเห็น</div>
                         <div class="post-actions">
                             <button class="action-btn" onclick="likePost(${post.id})">👍 ถูกใจ</button>
                             <button class="action-btn" onclick="toggleComments(${post.id})">💬 ความคิดเห็น (${postComments.length})</button>
                         </div>
 
-                        <!-- ส่วนแสดงคอมเมนต์ -->
                         <div class="comments-section" id="comments-${post.id}">
                             <div id="comment-list-${post.id}">
                                 ${postComments.map(c => `
@@ -119,19 +124,56 @@
         async function sendPost() {
             const input = document.getElementById('postInput');
             const authorInput = document.getElementById('authorInput');
+            const imageInput = document.getElementById('imageInput');
+            const btn = document.getElementById('postBtn');
+            
             const content = input.value.trim();
             const author = authorInput.value.trim() || 'ผู้ใช้ OmniConnect';
+            const file = imageInput.files[0];
 
-            if (!content) return;
+            if (!content && !file) return;
+
+            btn.disabled = true;
+            btn.innerText = "กำลังโพสต์...";
+
+            let imageUrl = null;
+
+            if (file) {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Date.now()}.${fileExt}`;
+                
+                const { data, error: uploadError } = await _supabase.storage
+                    .from('post-images')
+                    .upload(fileName, file);
+
+                if (uploadError) {
+                    alert('อัปโหลดรูปภาพไม่สำเร็จ: ' + uploadError.message);
+                    btn.disabled = false;
+                    btn.innerText = "โพสต์ข้อความ";
+                    return;
+                }
+
+                const { data: urlData } = _supabase.storage
+                    .from('post-images')
+                    .getPublicUrl(fileName);
+
+                imageUrl = urlData.publicUrl;
+            }
 
             const { error } = await _supabase
                 .from('posts')
-                .insert([{ content: content, author: author }]);
+                .insert([{ content: content, author: author, image_url: imageUrl }]);
 
             if (!error) {
                 input.value = '';
+                imageInput.value = '';
                 loadPosts();
+            } else {
+                alert('เกิดข้อผิดพลาดในการโพสต์: ' + error.message);
             }
+
+            btn.disabled = false;
+            btn.innerText = "โพสต์ข้อความ";
         }
 
         async function likePost(postId) {
@@ -156,12 +198,9 @@
                 .from('comments')
                 .insert([{ post_id: postId, author: author, content: content }]);
 
-            if (error) {
-                alert('ส่งคอมเมนต์ไม่ได้: ' + error.message);
-            } else {
+            if (!error) {
                 input.value = '';
                 loadPosts();
-                // เปิดกล่องคอมเมนต์ไว้อยู่หลังจากพิมพ์เสร็จ
                 document.getElementById(`comments-${postId}`).style.display = 'block';
             }
         }
