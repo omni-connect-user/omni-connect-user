@@ -15,7 +15,6 @@
         .input-author { width: 100%; border: 1px solid #e4e6eb; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; outline: none; }
         .create-post textarea { width: 100%; border: none; resize: none; outline: none; font-size: 15px; min-height: 60px; }
         .post-btn { background: #1877f2; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; width: 100%; margin-top: 8px; cursor: pointer; }
-        .post-btn:disabled { background: #e4e6eb; color: #bcc0c4; }
         .feed { display: flex; flex-direction: column; gap: 12px; }
         .post-card { background: #fff; border-radius: 8px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
@@ -24,9 +23,16 @@
         .post-time { font-size: 12px; color: #65676b; }
         .post-content { font-size: 15px; line-height: 1.4; margin-bottom: 10px; word-break: break-word; }
         .post-stats { font-size: 13px; color: #65676b; margin-bottom: 6px; }
-        .post-actions { display: flex; border-top: 1px solid #e4e6eb; padding-top: 8px; color: #65676b; font-weight: 600; font-size: 14px; }
-        .action-btn { flex: 1; text-align: center; padding: 8px 0; border-radius: 4px; cursor: pointer; user-select: none; background: #f0f2f5; }
-        .action-btn:active { background: #e4e6eb; }
+        .post-actions { display: flex; border-top: 1px solid #e4e6eb; padding-top: 8px; gap: 8px; }
+        .action-btn { flex: 1; border: none; padding: 8px 0; border-radius: 4px; cursor: pointer; background: #f0f2f5; font-weight: 600; color: #65676b; }
+        
+        /* สไตล์ส่วนคอมเมนต์ */
+        .comments-section { border-top: 1px solid #e4e6eb; margin-top: 10px; padding-top: 10px; display: none; }
+        .comment-item { background: #f0f2f5; padding: 8px 12px; border-radius: 12px; margin-bottom: 6px; font-size: 13px; }
+        .comment-author { font-weight: bold; margin-bottom: 2px; }
+        .comment-input-box { display: flex; gap: 6px; margin-top: 8px; }
+        .comment-input-box input { flex: 1; border: 1px solid #e4e6eb; padding: 6px 10px; border-radius: 15px; outline: none; font-size: 13px; }
+        .comment-send-btn { background: #1877f2; color: white; border: none; padding: 6px 12px; border-radius: 15px; cursor: pointer; font-size: 12px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -53,71 +59,102 @@
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         async function loadPosts() {
-            const { data, error } = await _supabase
+            const { data: posts, error } = await _supabase
                 .from('posts')
                 .select('*')
                 .order('created_at', { ascending: false });
 
             const feed = document.getElementById('feed');
-            if (error || !data || data.length === 0) {
+            if (error || !posts || posts.length === 0) {
                 feed.innerHTML = `<div style="text-align:center; color:#65676b; padding:20px;">ยังไม่มีโพสต์ ลองเป็นคนแรกที่โพสต์สิ!</div>`;
                 return;
             }
 
-            feed.innerHTML = data.map(post => `
-                <div class="post-card">
-                    <div class="post-header">
-                        <div class="avatar">${(post.author || 'U')[0].toUpperCase()}</div>
-                        <div>
-                            <div class="post-author">${post.author || 'ผู้ใช้งานทั่วไป'}</div>
-                            <div class="post-time">${new Date(post.created_at).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}</div>
+            // ดึงคอมเมนต์ทั้งหมดมาพร้อมกัน
+            const { data: comments } = await _supabase.from('comments').select('*');
+
+            feed.innerHTML = posts.map(post => {
+                const postComments = comments ? comments.filter(c => c.post_id === post.id) : [];
+                return `
+                    <div class="post-card">
+                        <div class="post-header">
+                            <div class="avatar">${(post.author || 'U')[0].toUpperCase()}</div>
+                            <div>
+                                <div class="post-author">${post.author || 'ผู้ใช้งานทั่วไป'}</div>
+                                <div class="post-time">${new Date(post.created_at).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}</div>
+                            </div>
+                        </div>
+                        <div class="post-content">${post.content}</div>
+                        <div class="post-stats">👍 ${post.likes || 0} คนถูกใจสิ่งนี้ • 💬 ${postComments.length} ความคิดเห็น</div>
+                        <div class="post-actions">
+                            <button class="action-btn" onclick="likePost(${post.id})">👍 ถูกใจ</button>
+                            <button class="action-btn" onclick="toggleComments(${post.id})">💬 ความคิดเห็น</button>
+                        </div>
+
+                        <!-- ส่วนแสดงคอมเมนต์ -->
+                        <div class="comments-section" id="comments-${post.id}">
+                            <div id="comment-list-${post.id}">
+                                ${postComments.map(c => `
+                                    <div class="comment-item">
+                                        <div class="comment-author">${c.author}</div>
+                                        <div>${c.content}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="comment-input-box">
+                                <input type="text" id="comment-input-${post.id}" placeholder="เขียนความคิดเห็น...">
+                                <button class="comment-send-btn" onclick="sendComment(${post.id})">ส่ง</button>
+                            </div>
                         </div>
                     </div>
-                    <div class="post-content">${post.content}</div>
-                    <div class="post-stats">👍 <span id="like-count-${post.id}">${post.likes || 0}</span> คนถูกใจสิ่งนี้</div>
-                    <div class="post-actions">
-                        <button class="action-btn" onclick="likePost(${post.id})">👍 ถูกใจ</button>
-                        <button class="action-btn" onclick="alert('ระบบคอมเมนต์กำลังตามมาเร็วๆ นี้!')">💬 ความคิดเห็น</button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         async function sendPost() {
             const input = document.getElementById('postInput');
             const authorInput = document.getElementById('authorInput');
-            const btn = document.getElementById('postBtn');
             const content = input.value.trim();
             const author = authorInput.value.trim() || 'ผู้ใช้ OmniConnect';
 
             if (!content) return;
 
-            btn.disabled = true;
-            btn.innerText = "กำลังโพสต์...";
-
             const { error } = await _supabase
                 .from('posts')
                 .insert([{ content: content, author: author }]);
 
-            if (error) {
-                alert('เกิดข้อผิดพลาดในการโพสต์: ' + error.message);
-            } else {
+            if (!error) {
                 input.value = '';
                 loadPosts();
             }
-
-            btn.disabled = false;
-            btn.innerText = "โพสต์ข้อความ";
         }
 
         async function likePost(postId) {
-            // สั่งอัปเดตบน Supabase
             const { error } = await _supabase.rpc('increment_likes', { row_id: postId });
+            if (!error) loadPosts();
+        }
+
+        function toggleComments(postId) {
+            const section = document.getElementById(`comments-${postId}`);
+            section.style.display = section.style.display === 'block' ? 'none' : 'block';
+        }
+
+        async function sendComment(postId) {
+            const input = document.getElementById(`comment-input-${postId}`);
+            const authorInput = document.getElementById('authorInput');
+            const content = input.value.trim();
+            const author = authorInput.value.trim() || 'ผู้ใช้ OmniConnect';
+
+            if (!content) return;
+
+            const { error } = await _supabase
+                .from('comments')
+                .insert([{ post_id: postId, author: author, content: content }]);
 
             if (error) {
-                alert('กดไลก์ไม่ได้เพราะ: ' + error.message);
+                alert('ส่งคอมเมนต์ไม่ได้: ' + error.message);
             } else {
-                // โหลดข้อมูลหน้าจอใหม่ทันที
+                input.value = '';
                 loadPosts();
             }
         }
