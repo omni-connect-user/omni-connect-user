@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniConnect</title>
+    <title>OmniConnect - Video Support</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -12,7 +12,10 @@
         .logo { color: #1877f2; font-size: 22px; font-weight: bold; }
         .container { max-width: 500px; margin: 0 auto; padding: 12px; }
 
-        /* Profile Box */
+        /* Media styles */
+        .media-content { width: 100%; border-radius: 8px; margin-bottom: 10px; display: block; background: #000; }
+        
+        /* Other styles (Profile, Feed, etc.) */
         .profile-card { background: #fff; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px; }
         .profile-avatar { width: 50px; height: 50px; border-radius: 50%; background: #1877f2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; overflow: hidden; flex-shrink: 0; }
         .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -20,103 +23,67 @@
         .profile-info input { width: 100%; border: 1px solid #e4e6eb; padding: 6px 10px; border-radius: 6px; font-size: 14px; font-weight: bold; outline: none; margin-bottom: 4px; }
         .profile-avatar-upload { font-size: 11px; color: #65676b; cursor: pointer; }
 
-        /* Stories Bar */
         .stories-wrapper { background: #fff; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .stories-title { font-size: 14px; font-weight: bold; color: #65676b; margin-bottom: 8px; }
-        .stories-container { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
-        .story-item { flex: 0 0 80px; height: 120px; border-radius: 10px; background: #e4e6eb; position: relative; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; padding: 6px; text-align: center; color: white; font-size: 11px; font-weight: bold; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
-        .story-item.add-story { background: #e7f3ff; color: #1877f2; justify-content: center; align-items: center; border: 2px dashed #1877f2; text-shadow: none; }
-        .story-img { position: absolute; top:0; left:0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        .stories-container { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+        .story-item { flex: 0 0 80px; height: 120px; border-radius: 10px; background: #e4e6eb; position: relative; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; padding: 6px; text-align: center; color: white; font-size: 11px; font-weight: bold; }
+        .story-item.add-story { background: #e7f3ff; color: #1877f2; justify-content: center; align-items: center; border: 2px dashed #1877f2; }
+        .story-media { position: absolute; top:0; left:0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
         .story-overlay { position: absolute; top:0; left:0; width: 100%; height: 100%; background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7)); z-index: 2; }
         .story-author { position: relative; z-index: 3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
 
-        /* Modal for Viewing Story */
-        .story-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; flex-direction: column; }
-        .story-modal-content { max-width: 90%; max-height: 80vh; border-radius: 8px; object-fit: contain; }
-        .story-modal-author { color: white; font-size: 16px; font-weight: bold; margin-bottom: 10px; }
-        .story-modal-close { position: absolute; top: 20px; right: 20px; color: white; font-size: 28px; cursor: pointer; }
+        .story-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; justify-content: center; align-items: center; }
+        .story-modal-media { max-width: 90%; max-height: 80vh; border-radius: 8px; }
 
-        /* Post Creation */
         .create-post { background: #fff; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .create-post textarea { width: 100%; border: none; resize: none; outline: none; font-size: 15px; min-height: 60px; }
         .file-input-wrapper { margin-top: 8px; font-size: 13px; color: #65676b; }
         .post-btn { background: #1877f2; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; width: 100%; margin-top: 8px; cursor: pointer; }
+        .post-btn:disabled { background: #93c5fd; cursor: not-allowed; }
 
-        /* Feed */
         .feed { display: flex; flex-direction: column; gap: 12px; }
         .post-card { background: #fff; border-radius: 12px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-        .avatar { width: 40px; height: 40px; border-radius: 50%; background: #1877f2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; overflow: hidden; }
-        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: #1877f2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; }
         .post-author { font-weight: bold; font-size: 14px; }
-        .post-time { font-size: 12px; color: #65676b; }
-        .post-content { font-size: 15px; line-height: 1.4; margin-bottom: 10px; word-break: break-word; }
-        .post-image { width: 100%; border-radius: 8px; margin-bottom: 10px; max-height: 400px; object-fit: cover; }
-        .post-stats { font-size: 13px; color: #65676b; margin-bottom: 6px; }
-        .post-actions { display: flex; border-top: 1px solid #e4e6eb; padding-top: 8px; gap: 8px; }
-        .action-btn { flex: 1; border: none; padding: 8px 0; border-radius: 6px; cursor: pointer; background: #f0f2f5; font-weight: 600; color: #65676b; }
-
-        .comments-section { border-top: 1px solid #e4e6eb; margin-top: 10px; padding-top: 10px; display: none; }
-        .comment-item { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-start; }
-        .comment-avatar { width: 28px; height: 28px; border-radius: 50%; background: #42b72a; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; flex-shrink: 0; }
-        .comment-bubble { background: #f0f2f5; padding: 8px 12px; border-radius: 16px; font-size: 13px; max-width: 85%; }
-        .comment-author { font-weight: bold; color: #050505; font-size: 12px; margin-bottom: 2px; }
-        .comment-text { color: #050505; line-height: 1.3; word-break: break-word; }
-        .comment-input-box { display: flex; gap: 6px; margin-top: 10px; }
-        .comment-input-box input { flex: 1; border: 1px solid #e4e6eb; padding: 8px 12px; border-radius: 20px; outline: none; font-size: 13px; background: #f0f2f5; }
-        .comment-send-btn { background: #1877f2; color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .post-content { font-size: 15px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="logo">OmniConnect</div>
-    </header>
+    <header><div class="logo">OmniConnect</div></header>
 
     <div class="container">
         <!-- Profile Box -->
         <div class="profile-card">
             <div class="profile-avatar" id="myAvatarDisplay">U</div>
             <div class="profile-info">
-                <input type="text" id="myAuthorInput" placeholder="ตั้งชื่อโปรไฟล์ของคุณ..." onchange="saveProfile()">
-                <div class="profile-avatar-upload">
-                    🖼️ เปลี่ยนรูปโปรไฟล์: <input type="file" id="myAvatarFile" accept="image/*" onchange="uploadAvatar()">
-                </div>
+                <input type="text" id="myAuthorInput" placeholder="ชื่อโปรไฟล์...">
             </div>
         </div>
 
-        <!-- Stories Section -->
+        <!-- Stories -->
         <div class="stories-wrapper">
-            <div class="stories-title">สตอรี่ (Stories)</div>
+            <div class="stories-title">สตอรี่</div>
             <div class="stories-container" id="storiesContainer">
                 <div class="story-item add-story" onclick="document.getElementById('storyFileInput').click()">
-                    <div style="font-size:24px;">+</div>
-                    <div>เพิ่มสตอรี่</div>
-                    <input type="file" id="storyFileInput" accept="image/*" style="display:none;" onchange="uploadStory(this)">
+                    <div style="font-size:24px;">+</div><input type="file" id="storyFileInput" accept="image/*,video/*" style="display:none;" onchange="uploadStory(this)">
                 </div>
             </div>
         </div>
 
-        <!-- Create Post -->
+        <!-- Post -->
         <div class="create-post">
             <textarea id="postInput" placeholder="คุณกำลังคิดอะไรอยู่?"></textarea>
-            <div class="file-input-wrapper">
-                📷 เพิ่มรูปภาพ: <input type="file" id="imageInput" accept="image/*">
-            </div>
-            <button class="post-btn" id="postBtn" onclick="sendPost()">โพสต์ข้อความ</button>
+            <div class="file-input-wrapper">📷/🎬 เพิ่มสื่อ: <input type="file" id="mediaInput" accept="image/*,video/*"></div>
+            <button class="post-btn" id="postBtn" onclick="sendPost()">โพสต์</button>
         </div>
 
-        <!-- Feed -->
-        <div class="feed" id="feed">
-            <div style="text-align:center; color:#65676b; padding:20px;">กำลังโหลดโพสต์...</div>
-        </div>
+        <div class="feed" id="feed"></div>
     </div>
 
-    <!-- Story Viewer Modal -->
     <div class="story-modal" id="storyModal" onclick="closeStoryModal()">
-        <span class="story-modal-close">&times;</span>
-        <div class="story-modal-author" id="storyModalAuthor"></div>
-        <img class="story-modal-content" id="storyModalImg" src="">
+        <div class="story-modal-media" id="storyModalMediaContainer"></div>
     </div>
 
     <script>
@@ -124,221 +91,106 @@
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJhenJ3cG1xbnFvaHBldGxrcGl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyOTk2MjUsImV4cCI6MjEwMjg3NTYyNX0.3n8lnroMGKssSHUqRneh7M9uyd1dSxymraZHzwXhhuk";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let myAvatarUrl = localStorage.getItem('omni_avatar') || '';
-
-        // Load Profile
-        document.getElementById('myAuthorInput').value = localStorage.getItem('omni_author') || 'แฟรงค์';
-        updateAvatarDisplay();
-
-        function saveProfile() {
-            const name = document.getElementById('myAuthorInput').value.trim();
-            localStorage.setItem('omni_author', name);
+        // Helper: ตรวจสอบว่าเป็นวิดีโอหรือไม่
+        function isVideo(url) {
+            return url && url.match(/\.(mp4|mov|webm|ogg)/i);
         }
 
-        function updateAvatarDisplay() {
-            const display = document.getElementById('myAvatarDisplay');
-            if (myAvatarUrl) {
-                display.innerHTML = `<img src="${myAvatarUrl}">`;
-            } else {
-                const name = document.getElementById('myAuthorInput').value || 'U';
-                display.innerText = name[0].toUpperCase();
+        // Helper: สร้าง HTML สำหรับแสดงสื่อ
+        function getMediaHtml(url, className = "media-content") {
+            if (isVideo(url)) {
+                return `<video src="${url}" controls class="${className}"></video>`;
             }
+            return `<img src="${url}" class="${className}">`;
         }
 
-        async function uploadAvatar() {
-            const file = document.getElementById('myAvatarFile').files[0];
-            if (!file) return;
-
-            const fileName = `avatar_${Date.now()}.${file.name.split('.').pop()}`;
-            const { data, error } = await _supabase.storage.from('post-images').upload(fileName, file);
-
-            if (!error) {
-                const { data: urlData } = _supabase.storage.from('post-images').getPublicUrl(fileName);
-                myAvatarUrl = urlData.publicUrl;
-                localStorage.setItem('omni_avatar', myAvatarUrl);
-                updateAvatarDisplay();
-            } else {
-                alert('อัปโหลดรูปโปรไฟล์ไม่สำเร็จ: ' + error.message);
-            }
-        }
-
-        // Stories System
-        async function loadStories() {
-            const { data: stories, error } = await _supabase.from('stories').select('*').order('created_at', { ascending: false });
-            const container = document.getElementById('storiesContainer');
-            
-            // Keep Add Story button
-            const addBtnHtml = `
-                <div class="story-item add-story" onclick="document.getElementById('storyFileInput').click()">
-                    <div style="font-size:24px;">+</div>
-                    <div>เพิ่มสตอรี่</div>
-                    <input type="file" id="storyFileInput" accept="image/*" style="display:none;" onchange="uploadStory(this)">
-                </div>
-            `;
-
-            if (error || !stories || stories.length === 0) {
-                container.innerHTML = addBtnHtml;
-                return;
-            }
-
-            const storiesHtml = stories.map(s => `
-                <div class="story-item" onclick="viewStory('${s.author}', '${s.media_url}')">
-                    <img src="${s.media_url}" class="story-img">
-                    <div class="story-overlay"></div>
-                    <div class="story-author">${s.author}</div>
+        async function loadPosts() {
+            const { data: posts } = await _supabase.from('posts').select('*').order('created_at', { ascending: false });
+            const feed = document.getElementById('feed');
+            feed.innerHTML = (posts || []).map(post => `
+                <div class="post-card">
+                    <div class="post-header"><div class="avatar">${(post.author || 'U')[0]}</div><strong>${post.author || 'User'}</strong></div>
+                    <div class="post-content">${post.content || ''}</div>
+                    ${post.image_url ? getMediaHtml(post.image_url) : ''}
                 </div>
             `).join('');
+        }
 
-            container.innerHTML = addBtnHtml + storiesHtml;
+        async function sendPost() {
+            const input = document.getElementById('postInput');
+            const fileInput = document.getElementById('mediaInput');
+            const file = fileInput.files[0];
+            const btn = document.getElementById('postBtn');
+            const author = document.getElementById('myAuthorInput').value || 'User';
+            
+            if (!input.value && !file) return;
+
+            btn.disabled = true;
+            btn.innerText = "กำลังอัปโหลด... กรุณารอสักครู่ (วิดีโออาจใช้เวลาสักครู่)";
+
+            let imageUrl = null;
+            try {
+                if (file) {
+                    const fileName = `${Date.now()}_${file.name}`;
+                    const { data, error } = await _supabase.storage.from('post-images').upload(fileName, file);
+                    
+                    if (error) throw error;
+
+                    const { data: urlData } = _supabase.storage.from('post-images').getPublicUrl(data.path);
+                    imageUrl = urlData.publicUrl;
+                }
+
+                await _supabase.from('posts').insert([{ content: input.value, author: author, image_url: imageUrl }]);
+                
+                input.value = '';
+                fileInput.value = '';
+                loadPosts();
+            } catch (err) {
+                alert("เกิดข้อผิดพลาดในการอัปโหลด: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "โพสต์";
+            }
         }
 
         async function uploadStory(input) {
             const file = input.files[0];
             if (!file) return;
-
-            const author = document.getElementById('myAuthorInput').value.trim() || 'แฟรงค์';
-            const fileName = `story_${Date.now()}.${file.name.split('.').pop()}`;
-
-            const { data, error } = await _supabase.storage.from('post-images').upload(fileName, file);
-
-            if (!error) {
-                const { data: urlData } = _supabase.storage.from('post-images').getPublicUrl(fileName);
-                await _supabase.from('stories').insert([{ author: author, media_url: urlData.publicUrl }]);
-                loadStories();
-            } else {
-                alert('อัปโหลดสตอรี่ไม่สำเร็จ: ' + error.message);
-            }
-        }
-
-        function viewStory(author, mediaUrl) {
-            document.getElementById('storyModalAuthor').innerText = author;
-            document.getElementById('storyModalImg').src = mediaUrl;
-            document.getElementById('storyModal').style.display = 'flex';
-        }
-
-        function closeStoryModal() {
-            document.getElementById('storyModal').style.display = 'none';
-        }
-
-        // Posts Feed
-        async function loadPosts() {
-            const { data: posts, error } = await _supabase.from('posts').select('*').order('created_at', { ascending: false });
-            const feed = document.getElementById('feed');
-
-            if (error || !posts || posts.length === 0) {
-                feed.innerHTML = `<div style="text-align:center; color:#65676b; padding:20px;">ยังไม่มีโพสต์ ลองเป็นคนแรกที่โพสต์สิ!</div>`;
-                return;
-            }
-
-            const { data: comments } = await _supabase.from('comments').select('*').order('created_at', { ascending: true });
-
-            feed.innerHTML = posts.map(post => {
-                const postComments = comments ? comments.filter(c => c.post_id === post.id) : [];
-                return `
-                    <div class="post-card">
-                        <div class="post-header">
-                            <div class="avatar">${(post.author || 'U')[0].toUpperCase()}</div>
-                            <div>
-                                <div class="post-author">${post.author || 'ผู้ใช้งานทั่วไป'}</div>
-                                <div class="post-time">${new Date(post.created_at).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}</div>
-                            </div>
-                        </div>
-                        <div class="post-content">${post.content}</div>
-                        ${post.image_url ? `<img src="${post.image_url}" class="post-image" alt="Post Image">` : ''}
-                        <div class="post-stats">👍 ${post.likes || 0} คนถูกใจสิ่งนี้ • 💬 ${postComments.length} ความคิดเห็น</div>
-                        <div class="post-actions">
-                            <button class="action-btn" onclick="likePost(${post.id})">👍 ถูกใจ</button>
-                            <button class="action-btn" onclick="toggleComments(${post.id})">💬 ความคิดเห็น (${postComments.length})</button>
-                        </div>
-
-                        <div class="comments-section" id="comments-${post.id}">
-                            <div id="comment-list-${post.id}">
-                                ${postComments.map(c => `
-                                    <div class="comment-item">
-                                        <div class="comment-avatar">${(c.author || 'U')[0].toUpperCase()}</div>
-                                        <div class="comment-bubble">
-                                            <div class="comment-author">${c.author || 'ผู้ใช้ OmniConnect'}</div>
-                                            <div class="comment-text">${c.content}</div>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                            <div class="comment-input-box">
-                                <input type="text" id="comment-input-${post.id}" placeholder="เขียนความคิดเห็นของคุณ...">
-                                <button class="comment-send-btn" onclick="sendComment(${post.id})">ส่ง</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        async function sendPost() {
-            const input = document.getElementById('postInput');
-            const author = document.getElementById('myAuthorInput').value.trim() || 'แฟรงค์';
-            const imageInput = document.getElementById('imageInput');
-            const btn = document.getElementById('postBtn');
+            const author = document.getElementById('myAuthorInput').value || 'User';
+            const fileName = `${Date.now()}_${file.name}`;
             
-            const content = input.value.trim();
-            const file = imageInput.files[0];
-
-            if (!content && !file) return;
-
-            btn.disabled = true;
-            btn.innerText = "กำลังโพสต์...";
-
-            let imageUrl = null;
-
-            if (file) {
-                const fileName = `${Date.now()}.${file.name.split('.').pop()}`;
-                const { data, error: uploadError } = await _supabase.storage.from('post-images').upload(fileName, file);
-
-                if (!uploadError) {
-                    const { data: urlData } = _supabase.storage.from('post-images').getPublicUrl(fileName);
-                    imageUrl = urlData.publicUrl;
-                }
-            }
-
-            const { error } = await _supabase.from('posts').insert([{ content: content, author: author, image_url: imageUrl }]);
-
-            if (!error) {
-                input.value = '';
-                imageInput.value = '';
-                loadPosts();
-            }
-
-            btn.disabled = false;
-            btn.innerText = "โพสต์ข้อความ";
+            const { data, error } = await _supabase.storage.from('post-images').upload(fileName, file);
+            if (error) return alert("อัปโหลดสตอรี่ไม่สำเร็จ: " + error.message);
+            
+            const { data: urlData } = _supabase.storage.from('post-images').getPublicUrl(data.path);
+            await _supabase.from('stories').insert([{ author: author, media_url: urlData.publicUrl }]);
+            loadStories();
         }
 
-        async function likePost(postId) {
-            const { error } = await _supabase.rpc('increment_likes', { row_id: postId });
-            if (!error) loadPosts();
+        async function loadStories() {
+            const { data: stories } = await _supabase.from('stories').select('*');
+            const container = document.getElementById('storiesContainer');
+            const addBtn = `<div class="story-item add-story" onclick="document.getElementById('storyFileInput').click()">+<input type="file" id="storyFileInput" accept="image/*,video/*" style="display:none;" onchange="uploadStory(this)"></div>`;
+            
+            container.innerHTML = addBtn + (stories || []).map(s => `
+                <div class="story-item" onclick="viewStory('${s.media_url}')">
+                    ${isVideo(s.media_url) ? `<video src="${s.media_url}" class="story-media"></video>` : `<img src="${s.media_url}" class="story-media">`}
+                    <div class="story-overlay"></div>
+                    <div class="story-author">${s.author || 'User'}</div>
+                </div>
+            `).join('');
         }
 
-        function toggleComments(postId) {
-            const section = document.getElementById(`comments-${postId}`);
-            section.style.display = section.style.display === 'block' ? 'none' : 'block';
+        function viewStory(url) {
+            const modal = document.getElementById('storyModal');
+            document.getElementById('storyModalMediaContainer').innerHTML = getMediaHtml(url, "story-modal-media");
+            modal.style.display = 'flex';
         }
+        
+        function closeStoryModal() { document.getElementById('storyModal').style.display = 'none'; }
 
-        async function sendComment(postId) {
-            const input = document.getElementById(`comment-input-${postId}`);
-            const author = document.getElementById('myAuthorInput').value.trim() || 'แฟรงค์';
-            const content = input.value.trim();
-
-            if (!content) return;
-
-            const { error } = await _supabase.from('comments').insert([{ post_id: postId, author: author, content: content }]);
-
-            if (!error) {
-                input.value = '';
-                loadPosts();
-                document.getElementById(`comments-${postId}`).style.display = 'block';
-            }
-        }
-
-        loadStories();
         loadPosts();
+        loadStories();
     </script>
 </body>
 </html>
