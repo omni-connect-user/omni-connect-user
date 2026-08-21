@@ -26,13 +26,16 @@
         .post-actions { display: flex; border-top: 1px solid #e4e6eb; padding-top: 8px; gap: 8px; }
         .action-btn { flex: 1; border: none; padding: 8px 0; border-radius: 4px; cursor: pointer; background: #f0f2f5; font-weight: 600; color: #65676b; }
         
-        /* สไตล์ส่วนคอมเมนต์ */
+        /* สไตล์ส่วนคอมเมนต์ปรับปรุงใหม่ */
         .comments-section { border-top: 1px solid #e4e6eb; margin-top: 10px; padding-top: 10px; display: none; }
-        .comment-item { background: #f0f2f5; padding: 8px 12px; border-radius: 12px; margin-bottom: 6px; font-size: 13px; }
-        .comment-author { font-weight: bold; margin-bottom: 2px; }
-        .comment-input-box { display: flex; gap: 6px; margin-top: 8px; }
-        .comment-input-box input { flex: 1; border: 1px solid #e4e6eb; padding: 6px 10px; border-radius: 15px; outline: none; font-size: 13px; }
-        .comment-send-btn { background: #1877f2; color: white; border: none; padding: 6px 12px; border-radius: 15px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .comment-item { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-start; }
+        .comment-avatar { width: 28px; height: 28px; border-radius: 50%; background: #42b72a; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; flex-shrink: 0; }
+        .comment-bubble { background: #f0f2f5; padding: 8px 12px; border-radius: 16px; font-size: 13px; max-width: 85%; }
+        .comment-author { font-weight: bold; color: #050505; font-size: 12px; margin-bottom: 2px; }
+        .comment-text { color: #050505; line-height: 1.3; word-break: break-word; }
+        .comment-input-box { display: flex; gap: 6px; margin-top: 10px; }
+        .comment-input-box input { flex: 1; border: 1px solid #e4e6eb; padding: 8px 12px; border-radius: 20px; outline: none; font-size: 13px; background: #f0f2f5; }
+        .comment-send-btn { background: #1877f2; color: white; border: none; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 12px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -70,8 +73,7 @@
                 return;
             }
 
-            // ดึงคอมเมนต์ทั้งหมดมาพร้อมกัน
-            const { data: comments } = await _supabase.from('comments').select('*');
+            const { data: comments } = await _supabase.from('comments').select('*').order('created_at', { ascending: true });
 
             feed.innerHTML = posts.map(post => {
                 const postComments = comments ? comments.filter(c => c.post_id === post.id) : [];
@@ -88,7 +90,7 @@
                         <div class="post-stats">👍 ${post.likes || 0} คนถูกใจสิ่งนี้ • 💬 ${postComments.length} ความคิดเห็น</div>
                         <div class="post-actions">
                             <button class="action-btn" onclick="likePost(${post.id})">👍 ถูกใจ</button>
-                            <button class="action-btn" onclick="toggleComments(${post.id})">💬 ความคิดเห็น</button>
+                            <button class="action-btn" onclick="toggleComments(${post.id})">💬 ความคิดเห็น (${postComments.length})</button>
                         </div>
 
                         <!-- ส่วนแสดงคอมเมนต์ -->
@@ -96,13 +98,16 @@
                             <div id="comment-list-${post.id}">
                                 ${postComments.map(c => `
                                     <div class="comment-item">
-                                        <div class="comment-author">${c.author}</div>
-                                        <div>${c.content}</div>
+                                        <div class="comment-avatar">${(c.author || 'U')[0].toUpperCase()}</div>
+                                        <div class="comment-bubble">
+                                            <div class="comment-author">${c.author || 'ผู้ใช้ OmniConnect'}</div>
+                                            <div class="comment-text">${c.content}</div>
+                                        </div>
                                     </div>
                                 `).join('')}
                             </div>
                             <div class="comment-input-box">
-                                <input type="text" id="comment-input-${post.id}" placeholder="เขียนความคิดเห็น...">
+                                <input type="text" id="comment-input-${post.id}" placeholder="เขียนความคิดเห็นของคุณ...">
                                 <button class="comment-send-btn" onclick="sendComment(${post.id})">ส่ง</button>
                             </div>
                         </div>
@@ -156,6 +161,8 @@
             } else {
                 input.value = '';
                 loadPosts();
+                // เปิดกล่องคอมเมนต์ไว้อยู่หลังจากพิมพ์เสร็จ
+                document.getElementById(`comments-${postId}`).style.display = 'block';
             }
         }
 
