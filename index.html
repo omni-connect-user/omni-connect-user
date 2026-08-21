@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniConnect - Custom Sound Like</title>
+    <title>OmniConnect - With Delete</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -39,13 +39,15 @@
 
         .feed { display: flex; flex-direction: column; gap: 12px; }
         .post-card { background: #fff; border-radius: 12px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .post-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .author-box { display: flex; align-items: center; gap: 10px; }
         .avatar { width: 40px; height: 40px; border-radius: 50%; background: #1877f2; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; }
-        .post-author { font-weight: bold; font-size: 14px; }
         .post-content { font-size: 15px; margin-bottom: 10px; }
         
         .post-actions { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e4e6eb; padding-top: 8px; margin-top: 8px; }
+        .action-group { display: flex; gap: 10px; }
         .like-btn { background: #f0f2f5; border: none; padding: 6px 12px; border-radius: 6px; color: #65676b; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .delete-btn { background: #fff1f1; border: none; padding: 6px 12px; border-radius: 6px; color: #dc3545; font-weight: bold; cursor: pointer; }
         .like-count { font-size: 13px; color: #65676b; }
     </style>
 </head>
@@ -104,7 +106,10 @@
             const feed = document.getElementById('feed');
             feed.innerHTML = (posts || []).map(post => `
                 <div class="post-card">
-                    <div class="post-header"><div class="avatar">${(post.author || 'U')[0]}</div><strong>${post.author || 'User'}</strong></div>
+                    <div class="post-header">
+                        <div class="author-box"><div class="avatar">${(post.author || 'U')[0]}</div><strong>${post.author || 'User'}</strong></div>
+                        <button class="delete-btn" onclick="deletePost(${post.id})">ลบ</button>
+                    </div>
                     <div class="post-content">${post.content || ''}</div>
                     ${post.image_url ? getMediaHtml(post.image_url) : ''}
                     <div class="post-actions">
@@ -115,17 +120,22 @@
             `).join('');
         }
 
-        async function likePost(postId) {
-            // เล่นเสียง Pop/Bubble (เสียงสดใส ไม่เหมือน Facebook)
-            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
-            audio.play().catch(e => console.log("เสียงถูกบล็อกโดยเบราว์เซอร์"));
-
-            // สั่งสั่นสะเทือนสั้นๆ
-            if ("vibrate" in navigator) {
-                navigator.vibrate(40);
+        async function deletePost(postId) {
+            if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบโพสต์นี้?')) return;
+            
+            const { error } = await _supabase.from('posts').delete().eq('id', postId);
+            if (error) {
+                alert("ลบไม่สำเร็จ: " + error.message);
+            } else {
+                loadPosts(); // โหลด Feed ใหม่
             }
+        }
 
-            // อัปเดตข้อมูลใน Database
+        async function likePost(postId) {
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
+            audio.play().catch(e => console.log("เสียงถูกบล็อก"));
+            if ("vibrate" in navigator) navigator.vibrate(40);
+            
             const { error } = await _supabase.rpc('increment_likes', { row_id: postId });
             if (!error) loadPosts();
         }
@@ -140,27 +150,24 @@
             if (!input.value && !file) return;
 
             btn.disabled = true;
-            btn.innerText = "กำลังอัปโหลด... กรุณารอสักครู่ (วิดีโออาจใช้เวลาสักครู่)";
+            btn.innerText = "กำลังอัปโหลด...";
 
             let imageUrl = null;
             try {
                 if (file) {
                     const fileName = `${Date.now()}_${file.name}`;
                     const { data, error } = await _supabase.storage.from('post-images').upload(fileName, file);
-                    
                     if (error) throw error;
-
                     const { data: urlData } = _supabase.storage.from('post-images').getPublicUrl(data.path);
                     imageUrl = urlData.publicUrl;
                 }
 
                 await _supabase.from('posts').insert([{ content: input.value, author: author, image_url: imageUrl }]);
-                
                 input.value = '';
                 fileInput.value = '';
                 loadPosts();
             } catch (err) {
-                alert("เกิดข้อผิดพลาดในการอัปโหลด: " + err.message);
+                alert("เกิดข้อผิดพลาด: " + err.message);
             } finally {
                 btn.disabled = false;
                 btn.innerText = "โพสต์";
@@ -174,7 +181,7 @@
             const fileName = `${Date.now()}_${file.name}`;
             
             const { data, error } = await _supabase.storage.from('post-images').upload(fileName, file);
-            if (error) return alert("อัปโหลดสตอรี่ไม่สำเร็จ: " + error.message);
+            if (error) return alert("อัปโหลดสตอรี่ไม่สำเร็จ");
             
             const { data: urlData } = _supabase.storage.from('post-images').getPublicUrl(data.path);
             await _supabase.from('stories').insert([{ author: author, media_url: urlData.publicUrl }]);
